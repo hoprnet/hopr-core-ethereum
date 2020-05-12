@@ -1,3 +1,4 @@
+import type { Indexer as IIndexer } from '@hoprnet/hopr-core-connector-interface'
 import type HoprEthereum from '..'
 import BN from 'bn.js'
 import chalk from 'chalk'
@@ -48,7 +49,7 @@ function isConfirmedBlock(blockNumber: number, onChainBlockNumber: number): bool
 /**
  * Simple indexer to keep track of all open payment channels.
  */
-class Indexer {
+class Indexer implements IIndexer {
   private log = Log(['channels'])
   private status: 'started' | 'stopped' = 'stopped'
   private unconfirmedEvents = new Map<string, OpenedChannelEvent | ClosedChannelEvent>()
