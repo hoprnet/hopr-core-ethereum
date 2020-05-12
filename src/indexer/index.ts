@@ -48,7 +48,7 @@ function isConfirmedBlock(blockNumber: number, onChainBlockNumber: number): bool
 /**
  * Simple indexer to keep track of all open payment channels.
  */
-class Channels {
+class Indexer {
   private log = Log(['channels'])
   private status: 'started' | 'stopped' = 'stopped'
   private unconfirmedEvents = new Map<string, OpenedChannelEvent | ClosedChannelEvent>()
@@ -277,7 +277,7 @@ class Channels {
         const onChainBlockNumber = await this.connector.web3.eth.getBlockNumber()
         let fromBlock = await this.getLatestConfirmedBlockNumber()
 
-        // go back 12 blocks in case of a re-org at time of stopping
+        // go back 8 blocks in case of a re-org at time of stopping
         if (fromBlock - MAX_CONFIRMATIONS > 0) {
           fromBlock = fromBlock - MAX_CONFIRMATIONS
         }
@@ -396,4 +396,4 @@ class Channels {
   }
 }
 
-export default Channels
+export default Indexer
