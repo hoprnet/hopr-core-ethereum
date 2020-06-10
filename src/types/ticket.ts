@@ -1,6 +1,6 @@
 import type { Types } from '@hoprnet/hopr-core-connector-interface'
 import BN from 'bn.js'
-import { stringToU8a, u8aToHex, u8aXOR } from '@hoprnet/hopr-utils'
+import { u8aToHex, u8aXOR, u8aConcat } from '@hoprnet/hopr-utils'
 import { Hash, TicketEpoch, Balance, SignedTicket } from '.'
 import { Uint8ArrayE } from '../types/extended'
 import { sign, verify, hash } from '../utils'
@@ -92,7 +92,7 @@ class Ticket extends Uint8ArrayE implements Types.Ticket {
   }
 
   get hash(): Promise<Hash> {
-    return hash(this)
+    return hash(u8aConcat(this.challenge, this.onChainSecret, this.epoch.toU8a(), this.amount.toU8a(), this.winProb))
   }
 
   static get SIZE(): number {
@@ -129,10 +129,10 @@ class Ticket extends Uint8ArrayE implements Types.Ticket {
         channelId,
         challenge,
         // @TODO set this dynamically
-        epoch: new TicketEpoch(0),
+        epoch: new TicketEpoch(1),
         amount: new Balance(amount.toString()),
         winProb,
-        onChainSecret: new Uint8ArrayE(stringToU8a(hashedSecret)),
+        onChainSecret: signedTicket.ticket.onChainSecret,
       }
     )
 
@@ -160,29 +160,20 @@ class Ticket extends Uint8ArrayE implements Types.Ticket {
   }
 
   static async submit(channel: ChannelInstance, signedTicket: SignedTicket) {
-    const { hoprChannels, signTransaction, account, db, dbKeys, utils } = channel.coreConnector
+    const { hoprChannels, signTransaction, account, utils } = channel.coreConnector
     const { ticket, signature } = signedTicket
     const { r, s, v } = utils.getSignatureParameters(signature)
+    const counterPartySecret = u8aXOR(false, ticket.challenge, ticket.onChainSecret)
 
-    // get my secret
-    let secret: Uint8Array
-    try {
-      secret = await db.get(Buffer.from(dbKeys.OnChainSecret()))
-    } catch (err) {
-      throw err
-    }
-
-    const counterPartySecret = u8aXOR(false, ticket.challenge, secret)
-
-    await signTransaction(
+    const transaction = await signTransaction(
       hoprChannels.methods.redeemTicket(
-        Array.from(ticket.challenge.values()),
-        Array.from(secret.values()),
-        Array.from(counterPartySecret.values()),
+        u8aToHex(ticket.challenge),
+        u8aToHex(ticket.onChainSecret),
+        u8aToHex(counterPartySecret),
         ticket.amount.toString(),
-        ticket.winProb.toString(),
-        r,
-        s,
+        u8aToHex(ticket.winProb),
+        u8aToHex(r),
+        u8aToHex(s),
         v
       ),
       {
@@ -191,6 +182,9 @@ class Ticket extends Uint8ArrayE implements Types.Ticket {
         nonce: await channel.coreConnector.nonce,
       }
     )
+
+    const receipt = await transaction.send()
+    console.log(receipt)
   }
 }
 

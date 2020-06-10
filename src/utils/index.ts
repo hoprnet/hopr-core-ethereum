@@ -3,7 +3,7 @@ import type { TransactionObject } from '../tsc/web3/types'
 import assert from 'assert'
 import { publicKeyConvert, publicKeyCreate, ecdsaSign, ecdsaRecover, ecdsaVerify } from 'secp256k1'
 import createKeccakHash from 'keccak'
-import { PromiEvent, TransactionReceipt, TransactionConfig, Sign } from 'web3-core'
+import { PromiEvent, TransactionReceipt, TransactionConfig } from 'web3-core'
 import { BlockTransactionString } from 'web3-eth'
 import Web3 from 'web3'
 import BN from 'bn.js'
@@ -350,5 +350,11 @@ export async function cleanupPromiEvent<E extends ContractEventEmitter<any>, R e
  * Get r,s,v values of a signature
  */
 export function getSignatureParameters(signature: Signature) {
-  return Web3.utils.getSignatureParameters(signature.toHex())
+  return {
+    r: signature.signature.slice(0, 32),
+    s: signature.signature.slice(32, 64),
+    v: signature.recovery,
+    // TODO: research which one should be used
+    // v: signature.recovery + 27,
+  }
 }

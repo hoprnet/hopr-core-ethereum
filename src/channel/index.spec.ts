@@ -1,9 +1,8 @@
 import { Ganache, migrate } from '@hoprnet/hopr-ethereum'
 import assert from 'assert'
-import { stringToU8a, u8aToHex, u8aEquals } from '@hoprnet/hopr-utils'
+import { stringToU8a, u8aToHex, u8aEquals, u8aXOR } from '@hoprnet/hopr-utils'
 import HoprTokenAbi from '@hoprnet/hopr-ethereum/build/extracted/abis/HoprToken.json'
 import { getPrivKeyData, createAccountAndFund, createNode } from '../utils/testing'
-import { randomBytes } from 'crypto'
 import BN from 'bn.js'
 import pipe from 'it-pipe'
 import Web3 from 'web3'
@@ -44,8 +43,8 @@ describe('test Channel class', function () {
     preChannels.clear()
 
     funder = await getPrivKeyData(stringToU8a(configs.FUND_ACCOUNT_PRIVATE_KEY))
-    const userA = await createAccountAndFund(web3, hoprToken, funder)
-    const userB = await createAccountAndFund(web3, hoprToken, funder)
+    const userA = await createAccountAndFund(web3, hoprToken, funder, configs.DEMO_ACCOUNTS[1])
+    const userB = await createAccountAndFund(web3, hoprToken, funder, configs.DEMO_ACCOUNTS[2])
 
     coreConnector = await createNode(userA.privKey)
     counterpartysCoreConnector = await createNode(userB.privKey)
@@ -100,10 +99,23 @@ describe('test Channel class', function () {
 
     channels.set(u8aToHex(channelId), channelType)
 
-    const preImage = randomBytes(32)
-    const hash = await coreConnector.utils.hash(preImage)
+    let secret: Uint8Array
+    try {
+      secret = await coreConnector.db.get(Buffer.from(coreConnector.dbKeys.OnChainSecret()))
+    } catch (err) {
+      throw err
+    }
 
-    const ticket = await channel.ticket.create(channel, new Balance(1), new Hash(hash))
+    let secretCounterParty: Uint8Array
+    try {
+      secretCounterParty = await counterpartysCoreConnector.db.get(Buffer.from(coreConnector.dbKeys.OnChainSecret()))
+    } catch (err) {
+      throw err
+    }
+
+    const challange = u8aXOR(false, secret, secretCounterParty)
+
+    const ticket = await channel.ticket.create(channel, new Balance(1), new Hash(challange))
     assert(u8aEquals(await ticket.signer, coreConnector.self.publicKey), `Check that signer is recoverable`)
 
     const signedChannelCounterparty = await SignedChannel.create(coreConnector, undefined, { channel: channelType })
@@ -156,5 +168,7 @@ describe('test Channel class', function () {
     )
 
     assert(await counterpartysChannel.ticket.verify(counterpartysChannel, ticket), `Ticket signature must be valid.`)
+
+    // await counterpartysChannel.ticket.submit(counterpartysChannel, ticket).catch(console.error)
   })
 })
