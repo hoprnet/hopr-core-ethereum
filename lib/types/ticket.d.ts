@@ -35,6 +35,6 @@ declare class Ticket extends Uint8ArrayE implements Types.Ticket {
         offset: number;
     }): Promise<SignedTicket>;
     static verify(channel: ChannelInstance, signedTicket: SignedTicket): Promise<boolean>;
-    static submit(channel: any, signedTicket: SignedTicket): Promise<void>;
+    static submit(channel: ChannelInstance, signedTicket: SignedTicket): Promise<void>;
 }
 export default Ticket;
