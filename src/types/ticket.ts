@@ -1,6 +1,6 @@
 import type { Types } from '@hoprnet/hopr-core-connector-interface'
 import BN from 'bn.js'
-import { stringToU8a, u8aToHex } from '@hoprnet/hopr-utils'
+import { stringToU8a, u8aToHex, u8aXOR } from '@hoprnet/hopr-utils'
 import { Hash, TicketEpoch, Balance, SignedTicket } from '.'
 import { Uint8ArrayE } from '../types/extended'
 import { sign, verify, hash } from '../utils'
@@ -159,9 +159,38 @@ class Ticket extends Uint8ArrayE implements Types.Ticket {
     return verify(await signedTicket.ticket.hash, signedTicket.signature, await channel.offChainCounterparty)
   }
 
-  // @TODO: implement submit
-  static async submit(channel: any, signedTicket: SignedTicket) {
-    throw Error('not implemented')
+  static async submit(channel: ChannelInstance, signedTicket: SignedTicket) {
+    const { hoprChannels, signTransaction, account, db, dbKeys, utils } = channel.coreConnector
+    const { ticket, signature } = signedTicket
+    const { r, s, v } = utils.getSignatureParameters(signature)
+
+    // get my secret
+    let secret: Uint8Array
+    try {
+      secret = await db.get(Buffer.from(dbKeys.OnChainSecret()))
+    } catch (err) {
+      throw err
+    }
+
+    const counterPartySecret = u8aXOR(false, ticket.challenge, secret)
+
+    await signTransaction(
+      hoprChannels.methods.redeemTicket(
+        Array.from(ticket.challenge.values()),
+        Array.from(secret.values()),
+        Array.from(counterPartySecret.values()),
+        ticket.amount.toString(),
+        ticket.winProb.toString(),
+        r,
+        s,
+        v
+      ),
+      {
+        from: account.toHex(),
+        to: hoprChannels.options.address,
+        nonce: await channel.coreConnector.nonce,
+      }
+    )
   }
 }
 
