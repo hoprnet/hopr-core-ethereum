@@ -6,11 +6,12 @@ import assert from 'assert'
 import Web3 from 'web3'
 import { randomBytes } from 'crypto'
 import { Ganache, migrate } from '@hoprnet/hopr-ethereum'
-import { stringToU8a, u8aToHex } from '@hoprnet/hopr-utils'
+import { stringToU8a, u8aToHex, durations } from '@hoprnet/hopr-utils'
 import HoprTokenAbi from '@hoprnet/hopr-ethereum/build/extracted/abis/HoprToken.json'
 import HoprChannelsAbi from '@hoprnet/hopr-ethereum/build/extracted/abis/HoprChannels.json'
 import { getPrivKeyData, createAccountAndFund, createNode, disconnectWeb3 } from './utils/testing'
 import * as configs from './config'
+import { wait } from './utils'
 
 describe('test Account class', function () {
   const ganache = new Ganache()
@@ -68,7 +69,12 @@ describe('test Account class', function () {
     })
 
     it('should be 3 after reconnecting to web3', async function () {
+      this.timeout(durations.seconds(4))
+
       await disconnectWeb3(coreConnector.web3)
+
+      // wait for reconnection
+      await wait(durations.seconds(2))
 
       await hoprChannels.methods.setHashedSecret(u8aToHex(randomBytes(32))).send({
         from: (await coreConnector.account.address).toHex(),
