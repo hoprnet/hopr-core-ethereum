@@ -62,7 +62,7 @@ class TicketFactory {
   }
 
   async submit(signedTicket: SignedTicket): Promise<void> {
-    const { hoprChannels, signTransaction, account, utils } = this.channel.coreConnector
+    const { chainId, hoprChannels, signTransaction, account, utils } = this.channel.coreConnector
     const { ticket, signature } = signedTicket
     const { r, s, v } = utils.getSignatureParameters(signature)
     const counterPartySecret = u8aXOR(false, ticket.challenge, ticket.onChainSecret)
@@ -76,7 +76,7 @@ class TicketFactory {
         u8aToHex(ticket.winProb),
         u8aToHex(r),
         u8aToHex(s),
-        v
+        utils.getRecoveryValue(v, chainId)
       ),
       {
         from: (await account.address).toHex(),
