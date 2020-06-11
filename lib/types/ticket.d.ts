@@ -1,8 +1,7 @@
 import type { Types } from '@hoprnet/hopr-core-connector-interface';
 import BN from 'bn.js';
-import { Hash, TicketEpoch, Balance, SignedTicket } from '.';
+import { Hash, TicketEpoch, Balance } from '.';
 import { Uint8ArrayE } from '../types/extended';
-import type ChannelInstance from '../channel';
 declare class Ticket extends Uint8ArrayE implements Types.Ticket {
     constructor(arr?: {
         bytes: ArrayBuffer;
@@ -30,11 +29,20 @@ declare class Ticket extends Uint8ArrayE implements Types.Ticket {
     get hash(): Promise<Hash>;
     static get SIZE(): number;
     getEmbeddedFunds(): BN;
-    static create(channel: ChannelInstance, amount: Balance, challenge: Hash, arr?: {
+    sign(privKey: Uint8Array, pubKey: Uint8Array, arr?: {
         bytes: ArrayBuffer;
         offset: number;
-    }): Promise<SignedTicket>;
-    static verify(channel: ChannelInstance, signedTicket: SignedTicket): Promise<boolean>;
-    static submit(channel: ChannelInstance, signedTicket: SignedTicket): Promise<void>;
+    }): Promise<Types.Signature>;
+    static create(arr?: {
+        bytes: ArrayBuffer;
+        offset: number;
+    }, struct?: {
+        channelId: Hash;
+        challenge: Hash;
+        epoch: TicketEpoch;
+        amount: Balance;
+        winProb: Hash;
+        onChainSecret: Hash;
+    }): Ticket;
 }
 export default Ticket;

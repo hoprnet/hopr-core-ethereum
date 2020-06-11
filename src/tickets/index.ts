@@ -5,24 +5,24 @@ import { SignedTicket, Hash } from '../types'
  * Store and get tickets stored by the node.
  */
 class Tickets {
-  static async store(coreConnector: HoprEthereum, channelId: Hash, signedTicket: SignedTicket): Promise<void> {
-    const { dbKeys, db } = coreConnector
+  constructor(public coreConnector: HoprEthereum) {}
 
-    const key = Buffer.from(dbKeys.Ticket(channelId, signedTicket.ticket.challenge))
+  async store(channelId: Hash, signedTicket: SignedTicket): Promise<void> {
+    const key = Buffer.from(this.coreConnector.dbKeys.Ticket(channelId, signedTicket.ticket.challenge))
     const value = Buffer.from(signedTicket)
 
-    await db.put(key, value)
+    await this.coreConnector.db.put(key, value)
   }
 
-  static async get(coreConnector: HoprEthereum, channelId: Hash): Promise<Map<string, SignedTicket>> {
-    const { dbKeys, db } = coreConnector
+  async get(channelId: Hash): Promise<Map<string, SignedTicket>> {
     const tickets = new Map<string, SignedTicket>()
 
     return new Promise(async (resolve, reject) => {
-      db.createReadStream({
-        gte: Buffer.from(dbKeys.Ticket(channelId, new Uint8Array(SignedTicket.SIZE).fill(0x00))),
-        lte: Buffer.from(dbKeys.Ticket(channelId, new Uint8Array(SignedTicket.SIZE).fill(0xff))),
-      })
+      this.coreConnector.db
+        .createReadStream({
+          gte: Buffer.from(this.coreConnector.dbKeys.Ticket(channelId, new Uint8Array(SignedTicket.SIZE).fill(0x00))),
+          lte: Buffer.from(this.coreConnector.dbKeys.Ticket(channelId, new Uint8Array(SignedTicket.SIZE).fill(0xff))),
+        })
         .on('error', (err) => reject(err))
         .on('data', ({ value }: { value: Buffer }) => {
           const signedTicket = new SignedTicket({

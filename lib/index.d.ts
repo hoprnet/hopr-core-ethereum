@@ -1,26 +1,19 @@
 import type { addresses } from '@hoprnet/hopr-ethereum';
 import Web3 from 'web3';
 import { LevelUp } from 'levelup';
-import HoprCoreConnector, { Types as ITypes, Channel as IChannel, Constants as IConstants } from '@hoprnet/hopr-core-connector-interface';
+import HoprCoreConnector from '@hoprnet/hopr-core-connector-interface';
+import { ChannelFactory } from './channel';
+import types from './types';
 import Tickets from './tickets';
 import Indexer from './indexer';
 import * as dbkeys from './dbKeys';
-import * as types from './types';
 import * as utils from './utils';
 import * as constants from './constants';
 import { HoprChannels } from './tsc/web3/HoprChannels';
 import { HoprToken } from './tsc/web3/HoprToken';
+import Account from './account';
 export default class HoprEthereum implements HoprCoreConnector {
     db: LevelUp;
-    self: {
-        privateKey: Uint8Array;
-        publicKey: Uint8Array;
-        onChainKeyPair: {
-            privateKey?: Uint8Array;
-            publicKey?: Uint8Array;
-        };
-    };
-    account: types.AccountId;
     web3: Web3;
     network: addresses.Networks;
     hoprChannels: HoprChannels;
@@ -30,43 +23,31 @@ export default class HoprEthereum implements HoprCoreConnector {
     };
     private _status;
     private _initializing;
+    _onChainValuesInitialized: boolean;
     private _starting;
     private _stopping;
-    private _nonce?;
     signTransaction: ReturnType<typeof utils.TransactionSigner>;
     log: ReturnType<typeof utils['Log']>;
-    constructor(db: LevelUp, self: {
-        privateKey: Uint8Array;
-        publicKey: Uint8Array;
-        onChainKeyPair: {
-            privateKey?: Uint8Array;
-            publicKey?: Uint8Array;
-        };
-    }, account: types.AccountId, web3: Web3, network: addresses.Networks, hoprChannels: HoprChannels, hoprToken: HoprToken, options: {
+    channel: ChannelFactory;
+    types: types;
+    indexer: Indexer;
+    account: Account;
+    tickets: Tickets;
+    constructor(db: LevelUp, web3: Web3, network: addresses.Networks, hoprChannels: HoprChannels, hoprToken: HoprToken, options: {
         debug: boolean;
-    });
+    }, privateKey: Uint8Array, publicKey: Uint8Array);
     readonly dbKeys: typeof dbkeys;
     readonly utils: typeof utils;
-    readonly types: typeof ITypes;
     readonly constants: typeof constants;
-    readonly channel: typeof IChannel;
     readonly CHAIN_NAME = "HOPR on Ethereum";
-    readonly tickets: typeof Tickets;
-    readonly indexer: Indexer;
-    /**
-     * @returns the current balances of the account associated with this node (HOPR)
-     */
-    get nonce(): Promise<number>;
     /**
      * Returns the current balances of the account associated with this node (HOPR)
      * @returns a promise resolved to Balance
      */
-    get accountBalance(): Promise<types.Balance>;
     /**
      * Returns the current native balance (ETH)
      * @returns a promise resolved to Balance
      */
-    get accountNativeBalance(): Promise<types.NativeBalance>;
     /**
      * Initialises the connector, e.g. connect to a blockchain node.
      */
@@ -87,16 +68,10 @@ export default class HoprEthereum implements HoprCoreConnector {
      */
     initialize(): Promise<void>;
     /**
-     * Initializes node's account secret, if it doesn't exist
-     * it will generate one.
-     * @returns a promise resolved true if account secret is set correctly
-     */
-    initializeAccountSecret(): Promise<boolean>;
-    /**
      * Checks whether node has an account secret set onchain and offchain
      * @returns a promise resolved true if secret is set correctly
      */
-    checkAccountSecret(): Promise<boolean>;
+    checkAccountSecret(): Promise<void>;
     /**
      * generate and set account secret
      */
@@ -105,9 +80,9 @@ export default class HoprEthereum implements HoprCoreConnector {
      * Checks whether web3 connection is alive
      * @returns a promise resolved true if web3 connection is alive
      */
-    checkWeb3(): Promise<boolean>;
+    checkWeb3(): Promise<void>;
     private getDebugAccountSecret;
-    static readonly constants: typeof IConstants;
+    static get constants(): typeof constants;
     /**
      * Creates an uninitialised instance.
      *

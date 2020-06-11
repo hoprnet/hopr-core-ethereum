@@ -1,12 +1,9 @@
 import type { Types } from '@hoprnet/hopr-core-connector-interface'
 import BN from 'bn.js'
-import { u8aToHex, u8aXOR, u8aConcat } from '@hoprnet/hopr-utils'
-import { Hash, TicketEpoch, Balance, SignedTicket } from '.'
+import { u8aConcat } from '@hoprnet/hopr-utils'
+import { Hash, TicketEpoch, Balance } from '.'
 import { Uint8ArrayE } from '../types/extended'
-import { sign, verify, hash } from '../utils'
-import type ChannelInstance from '../channel'
-
-const WIN_PROB = new BN(1)
+import { hash, sign } from '../utils'
 
 class Ticket extends Uint8ArrayE implements Types.Ticket {
   constructor(
@@ -103,78 +100,32 @@ class Ticket extends Uint8ArrayE implements Types.Ticket {
     return this.amount.mul(new BN(this.winProb)).div(new BN(new Uint8Array(Hash.SIZE).fill(0xff)))
   }
 
-  static async create(
-    channel: ChannelInstance,
-    amount: Balance,
-    challenge: Hash,
+  async sign(
+    privKey: Uint8Array,
+    pubKey: Uint8Array,
     arr?: {
       bytes: ArrayBuffer
       offset: number
     }
-  ): Promise<SignedTicket> {
-    const winProb = new Uint8ArrayE(new BN(new Uint8Array(Hash.SIZE).fill(0xff)).div(WIN_PROB).toArray('le', Hash.SIZE))
-    const channelId = await channel.channelId
-
-    const ticket = new Ticket(undefined, {
-      channelId,
-      challenge,
-      epoch: new TicketEpoch(1), // @TODO: set this dynamically
-      amount: new Balance(amount.toString()),
-      winProb,
-      onChainSecret: new Hash(), // @TODO: use pre_image
-    })
-
-    const signature = await sign(await ticket.hash, channel.coreConnector.self.privateKey)
-
-    const signedTicket = new SignedTicket(undefined, {
-      signature,
-      ticket,
-    })
-
-    return signedTicket
+  ): Promise<Types.Signature> {
+    return await sign(await this.hash, privKey, undefined, arr)
   }
 
-  static async verify(channel: ChannelInstance, signedTicket: SignedTicket): Promise<boolean> {
-    // @TODO: check if this is needed
-    // if ((await channel.currentBalanceOfCounterparty).add(signedTicket.ticket.amount).lt(await channel.balance)) {
-    //   return false
-    // }
-
-    try {
-      await channel.testAndSetNonce(signedTicket)
-    } catch {
-      return false
+  static create(
+    arr?: {
+      bytes: ArrayBuffer
+      offset: number
+    },
+    struct?: {
+      channelId: Hash
+      challenge: Hash
+      epoch: TicketEpoch
+      amount: Balance
+      winProb: Hash
+      onChainSecret: Hash
     }
-
-    return verify(await signedTicket.ticket.hash, signedTicket.signature, await channel.offChainCounterparty)
-  }
-
-  static async submit(channel: ChannelInstance, signedTicket: SignedTicket) {
-    const { hoprChannels, signTransaction, account, utils } = channel.coreConnector
-    const { ticket, signature } = signedTicket
-    const { r, s, v } = utils.getSignatureParameters(signature)
-    const counterPartySecret = u8aXOR(false, ticket.challenge, ticket.onChainSecret)
-
-    const transaction = await signTransaction(
-      hoprChannels.methods.redeemTicket(
-        u8aToHex(ticket.challenge),
-        u8aToHex(ticket.onChainSecret),
-        u8aToHex(counterPartySecret),
-        ticket.amount.toString(),
-        u8aToHex(ticket.winProb),
-        u8aToHex(r),
-        u8aToHex(s),
-        v //TODO: https://github.com/ethereum/EIPs/blob/master/EIPS/eip-155.md
-      ),
-      {
-        from: account.toHex(),
-        to: hoprChannels.options.address,
-        nonce: await channel.coreConnector.nonce,
-      }
-    )
-
-    const receipt = await transaction.send()
-    console.log(receipt)
+  ) {
+    return new Ticket(arr, struct)
   }
 }
 

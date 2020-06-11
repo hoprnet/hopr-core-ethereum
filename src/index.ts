@@ -4,127 +4,75 @@ import Web3 from 'web3'
 import { LevelUp } from 'levelup'
 import HoprChannelsAbi from '@hoprnet/hopr-ethereum/build/extracted/abis/HoprChannels.json'
 import HoprTokenAbi from '@hoprnet/hopr-ethereum/build/extracted/abis/HoprToken.json'
-import HoprCoreConnector, {
-  Types as ITypes,
-  Channel as IChannel,
-  Constants as IConstants,
-} from '@hoprnet/hopr-core-connector-interface'
+import HoprCoreConnector from '@hoprnet/hopr-core-connector-interface'
 import { u8aToHex, stringToU8a, u8aEquals } from '@hoprnet/hopr-utils'
 import chalk from 'chalk'
-import Channel from './channel'
+import { ChannelFactory } from './channel'
+import types from './types'
 import Tickets from './tickets'
 import Indexer from './indexer'
 import * as dbkeys from './dbKeys'
-import * as types from './types'
 import * as utils from './utils'
 import * as constants from './constants'
 import * as config from './config'
 import { HoprChannels } from './tsc/web3/HoprChannels'
 import { HoprToken } from './tsc/web3/HoprToken'
+import Account from './account'
 
 export default class HoprEthereum implements HoprCoreConnector {
   private _status: 'uninitialized' | 'initialized' | 'started' | 'stopped' = 'uninitialized'
   private _initializing: Promise<void>
+  public _onChainValuesInitialized: boolean
   private _starting: Promise<void>
   private _stopping: Promise<void>
-  private _nonce?: {
-    getTransactionCount: Promise<number>
-    virtualNonce?: number
-    nonce?: number
-  }
   public signTransaction: ReturnType<typeof utils.TransactionSigner>
   public log: ReturnType<typeof utils['Log']>
 
+  public channel: ChannelFactory
+  public types: types
+  public indexer: Indexer
+  public account: Account
+  public tickets: Tickets
+
   constructor(
     public db: LevelUp,
-    public self: {
-      privateKey: Uint8Array
-      publicKey: Uint8Array
-      onChainKeyPair: {
-        privateKey?: Uint8Array
-        publicKey?: Uint8Array
-      }
-    },
-    public account: types.AccountId,
     public web3: Web3,
     public network: addresses.Networks,
     public hoprChannels: HoprChannels,
     public hoprToken: HoprToken,
     public options: {
       debug: boolean
-    }
+    },
+    privateKey: Uint8Array,
+    publicKey: Uint8Array
   ) {
-    this.signTransaction = utils.TransactionSigner(web3, self.privateKey)
+    this.account = new Account(this, privateKey, publicKey)
+    this.indexer = new Indexer(this)
+    this.tickets = new Tickets(this)
+    this.types = new types()
+    this.channel = new ChannelFactory(this)
+
+    this._onChainValuesInitialized = false
+    this.signTransaction = utils.TransactionSigner(web3, privateKey)
     this.log = utils.Log()
   }
 
   readonly dbKeys = dbkeys
   readonly utils = utils
-  readonly types = types as typeof ITypes
   readonly constants = constants
-  readonly channel = Channel as typeof IChannel
   readonly CHAIN_NAME = 'HOPR on Ethereum'
-  readonly tickets = Tickets
-  readonly indexer = new Indexer(this)
-
-  /**
-   * @returns the current balances of the account associated with this node (HOPR)
-   */
-  get nonce(): Promise<number> {
-    return new Promise<number>(async (resolve, reject) => {
-      try {
-        let nonce: number | undefined
-
-        // 'first' call
-        if (typeof this._nonce === 'undefined') {
-          this._nonce = {
-            getTransactionCount: this.web3.eth.getTransactionCount(this.account.toHex()),
-            virtualNonce: 0,
-            nonce: undefined,
-          }
-
-          nonce = await this._nonce.getTransactionCount
-        }
-        // called while 'first' call hasnt returned
-        else if (typeof this._nonce.nonce === 'undefined') {
-          this._nonce.virtualNonce += 1
-          const virtualNonce = this._nonce.virtualNonce
-
-          nonce = await this._nonce.getTransactionCount.then((count) => {
-            return count + virtualNonce
-          })
-        }
-        // called after 'first' call has returned
-        else {
-          nonce = this._nonce.nonce + 1
-        }
-
-        this._nonce.nonce = nonce
-        return resolve(nonce)
-      } catch (err) {
-        return reject(err.message)
-      }
-    })
-  }
 
   /**
    * Returns the current balances of the account associated with this node (HOPR)
    * @returns a promise resolved to Balance
    */
-  get accountBalance() {
-    return this.hoprToken.methods
-      .balanceOf(this.account.toHex())
-      .call()
-      .then((res) => new types.Balance(res))
-  }
 
   /**
    * Returns the current native balance (ETH)
    * @returns a promise resolved to Balance
    */
-  get accountNativeBalance() {
-    return this.web3.eth.getBalance(this.account.toHex()).then((res) => new types.NativeBalance(res))
-  }
+
+  // get ticketEpoch(): Promise<TicketEpoch> {}
 
   /**
    * Initialises the connector, e.g. connect to a blockchain node.
@@ -171,7 +119,7 @@ export default class HoprEthereum implements HoprCoreConnector {
   /**
    * Stops the connector.
    */
-  async stop() {
+  async stop(): Promise<void> {
     this.log('Stopping connector..')
 
     if (typeof this._stopping !== 'undefined') {
@@ -214,8 +162,14 @@ export default class HoprEthereum implements HoprCoreConnector {
    * Initializes the on-chain values of our account.
    * @param nonce optional specify nonce of the account to run multiple queries simultaneously
    */
-  async initOnchainValues(nonce?: number) {
-    return this.setAccountSecret(nonce)
+  async initOnchainValues(nonce?: number): Promise<void> {
+    if (this._onChainValuesInitialized) {
+      return
+    }
+
+    await this.setAccountSecret(nonce)
+
+    this._onChainValuesInitialized = true
   }
 
   /**
@@ -238,19 +192,14 @@ export default class HoprEthereum implements HoprCoreConnector {
     this._initializing = Promise.resolve()
       .then(async () => {
         // initialize stuff
-        const responses = await Promise.all<boolean>([
+        await Promise.all([
           // confirm web3 is connected
           this.checkWeb3(),
-          // initialize account secret
-          this.initializeAccountSecret(),
           // start channels indexing
           this.indexer.start(),
+          // check account secret
+          this.checkAccountSecret(),
         ])
-
-        const allOk = responses.every((r) => !!r)
-        if (!allOk) {
-          throw Error('could not initialize connector')
-        }
 
         this._status = 'initialized'
         this.log(chalk.green('Connector initialized'))
@@ -266,75 +215,35 @@ export default class HoprEthereum implements HoprCoreConnector {
   }
 
   /**
-   * Initializes node's account secret, if it doesn't exist
-   * it will generate one.
-   * @returns a promise resolved true if account secret is set correctly
-   */
-  async initializeAccountSecret(): Promise<boolean> {
-    try {
-      this.log('Initializing account secret')
-      const ok = await this.checkAccountSecret()
-
-      if (!ok) {
-        this.log('Setting account secret..')
-        await this.setAccountSecret()
-      }
-
-      this.log(chalk.green('Account secret initialized!'))
-      return true
-    } catch (err) {
-      this.log(chalk.red(`error initializing account secret: ${err.message}`))
-
-      // special message for testnet
-      if (
-        [constants.ERRORS.OOF_ETH, constants.ERRORS.OOF_HOPR].includes(err.message) &&
-        ['private', 'kovan'].includes(this.network)
-      ) {
-        console.log(
-          `Congratulations - your HOPR testnet node is ready to go!\n` +
-            `Please fund your Ethereum Kovan account ${chalk.yellow(
-              this.account.toHex()
-            )} with some Kovan ETH and Kovan HOPR test tokens. You‘ll need both to send messages.\n` +
-            `You can request Kovan ETH from ${chalk.blue('https://faucet.kovan.network')}\n` +
-            `For Kovan HOPR test tokens visit our Faucet at ${chalk.blue('https://faucet.hoprnet.io')}\n`
-        )
-        process.exit()
-      }
-
-      return false
-    }
-  }
-
-  /**
    * Checks whether node has an account secret set onchain and offchain
    * @returns a promise resolved true if secret is set correctly
    */
-  async checkAccountSecret(): Promise<boolean> {
-    let offChainSecret: Uint8Array
-    let onChainSecret: Uint8Array
+  async checkAccountSecret(): Promise<void> {
+    let [onChainSecret, offChainSecret] = await Promise.all([
+      // get onChainSecret
+      this.hoprChannels.methods
+        .accounts((await this.account.address).toHex())
+        .call()
+        .then((res) => stringToU8a(res.hashedSecret))
+        .then((secret: Uint8Array) => {
+          if (u8aEquals(secret, new Uint8Array(this.types.Hash.SIZE).fill(0x00))) {
+            return undefined
+          }
 
-    // retrieve offChain secret
-    try {
-      offChainSecret = await this.db.get(Buffer.from(dbkeys.OnChainSecret()))
-    } catch (err) {
-      if (err.notFound != true) {
-        throw err
-      }
-      offChainSecret = undefined
-    }
-
-    // retrieve onChain secret
-    onChainSecret = await this.hoprChannels.methods
-      .accounts(this.account.toHex())
-      .call()
-      .then((res) => stringToU8a(res.hashedSecret))
-      .then((secret: Uint8Array) => {
-        if (u8aEquals(secret, new Uint8Array(types.Hash.SIZE).fill(0x00))) {
-          return undefined
+          return secret
+        }),
+      // get offChainSecret
+      this.db.get(Buffer.from(dbkeys.OnChainSecret())).catch((err) => {
+        if (err.notFound != true) {
+          throw err
         }
+      }),
+    ])
 
-        return secret
-      })
+    // @TODO check with most recent exponent and fail if it is not equal
+    // if (!u8aEquals(onChainSecret, offChainSecret)) {
+    //   throw Error(`Inconsistency found. On-chain secret is set to ${u8aToHex(onChainSecret)} whilst off-chain secret is  ${u8aToHex(offChainSecret)}`)
+    // }
 
     let hasOffChainSecret = typeof offChainSecret !== 'undefined'
     let hasOnChainSecret = typeof onChainSecret !== 'undefined'
@@ -342,12 +251,13 @@ export default class HoprEthereum implements HoprCoreConnector {
     if (hasOffChainSecret !== hasOnChainSecret) {
       if (hasOffChainSecret) {
         this.log(`Key is present off-chain but not on-chain, submitting..`)
+        // @TODO this potentially dangerous because it increases the account counter
         await utils.waitForConfirmation(
           (
             await this.signTransaction(this.hoprChannels.methods.setHashedSecret(u8aToHex(offChainSecret)), {
-              from: this.account.toHex(),
+              from: (await this.account.address).toHex(),
               to: this.hoprChannels.options.address,
-              nonce: await this.nonce,
+              nonce: await this.account.nonce,
             })
           ).send()
         )
@@ -363,7 +273,7 @@ export default class HoprEthereum implements HoprCoreConnector {
       }
     }
 
-    return hasOffChainSecret && hasOnChainSecret
+    this._onChainValuesInitialized = hasOffChainSecret && hasOnChainSecret
   }
 
   /**
@@ -387,9 +297,9 @@ export default class HoprEthereum implements HoprCoreConnector {
       await utils.waitForConfirmation(
         (
           await this.signTransaction(this.hoprChannels.methods.setHashedSecret(u8aToHex(secret)), {
-            from: this.account.toHex(),
+            from: (await this.account.address).toHex(),
             to: this.hoprChannels.options.address,
-            nonce: nonce || (await this.nonce),
+            nonce: nonce || (await this.account.nonce),
           })
         ).send()
       ),
@@ -401,23 +311,26 @@ export default class HoprEthereum implements HoprCoreConnector {
    * Checks whether web3 connection is alive
    * @returns a promise resolved true if web3 connection is alive
    */
-  async checkWeb3(): Promise<boolean> {
+  async checkWeb3(): Promise<void> {
+    let isListening
     try {
-      const isListening = await this.web3.eth.net.isListening()
-      if (!isListening) throw Error('web3 is not connected')
-
-      return true
+      isListening = await this.web3.eth.net.isListening()
     } catch (err) {
       this.log(chalk.red(`error checking web3: ${err.message}`))
-      return false
+    }
+
+    if (!isListening) {
+      throw Error('web3 is not connected')
     }
   }
 
   private getDebugAccountSecret(): Uint8Array {
-    return createHash('sha256').update(this.self.publicKey).digest()
+    return createHash('sha256').update(this.account.keys.onChain.pubKey).digest()
   }
 
-  static readonly constants = constants as typeof IConstants
+  static get constants() {
+    return constants
+  }
 
   /**
    * Creates an uninitialised instance.
@@ -448,8 +361,6 @@ export default class HoprEthereum implements HoprCoreConnector {
 
     const providerUri = options?.provider || config.DEFAULT_URI
     const privateKey = usingSeed ? seed : stringToU8a(config.DEMO_ACCOUNTS[options.id])
-    const publicKey = await utils.privKeyToPubKey(privateKey)
-    const address = await utils.pubKeyToAccountId(publicKey)
 
     const provider = new Web3.providers.WebsocketProvider(providerUri, {
       reconnect: {
@@ -461,8 +372,11 @@ export default class HoprEthereum implements HoprCoreConnector {
 
     const web3 = new Web3(provider)
 
-    const account = new types.AccountId(address)
-    const network = await utils.getNetworkId(web3)
+    const [network, publicKey] = await Promise.all([
+      /* prettier-ignore */
+      utils.getNetworkId(web3),
+      utils.privKeyToPubKey(privateKey),
+    ])
 
     if (typeof config.CHANNELS_ADDRESSES[network] === 'undefined') {
       throw Error(`channel contract address from network ${network} not found`)
@@ -476,22 +390,15 @@ export default class HoprEthereum implements HoprCoreConnector {
 
     const coreConnector = new HoprEthereum(
       db,
-      {
-        privateKey,
-        publicKey,
-        onChainKeyPair: {
-          privateKey,
-          publicKey,
-        },
-      },
-      account,
       web3,
       network,
       hoprChannels,
       hoprToken,
-      { debug: options?.debug || false }
+      { debug: options?.debug || false },
+      privateKey,
+      publicKey
     )
-    coreConnector.log(`using ethereum address ${account.toHex()}`)
+    coreConnector.log(`using ethereum address ${(await coreConnector.account.address).toHex()}`)
 
     // begin initializing
     coreConnector.initialize().catch((err: Error) => {
