@@ -21,7 +21,15 @@ declare class Account {
     };
     constructor(coreConnector: HoprEthereum, privKey: Uint8Array, pubKey: Uint8Array);
     get nonce(): Promise<number>;
+    /**
+     * Returns the current balances of the account associated with this node (HOPR)
+     * @returns a promise resolved to Balance
+     */
     get balance(): Promise<Balance>;
+    /**
+     * Returns the current native balance (ETH)
+     * @returns a promise resolved to Balance
+     */
     get nativeBalance(): Promise<NativeBalance>;
     get ticketEpoch(): Promise<TicketEpoch>;
     /**

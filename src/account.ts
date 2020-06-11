@@ -81,7 +81,7 @@ class Account {
     return new Promise(async (resolve, reject) => {
       try {
         if (typeof this._ticketEpoch !== 'undefined') {
-          return this._ticketEpoch
+          return resolve(this._ticketEpoch)
         }
 
         // listen for 'SecretHashSet' events and update 'ticketEpoch'

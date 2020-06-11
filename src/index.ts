@@ -187,6 +187,8 @@ export default class HoprEthereum implements HoprCoreConnector {
           this.indexer.start(),
           // check account secret
           this.checkAccountSecret(),
+          // fetch ticketEpoch
+          this.account.ticketEpoch,
         ])
 
         this._status = 'initialized'
