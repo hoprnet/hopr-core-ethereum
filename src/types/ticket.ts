@@ -164,7 +164,7 @@ class Ticket extends Uint8ArrayE implements Types.Ticket {
         u8aToHex(ticket.winProb),
         u8aToHex(r),
         u8aToHex(s),
-        v
+        v //TODO: https://github.com/ethereum/EIPs/blob/master/EIPS/eip-155.md
       ),
       {
         from: account.toHex(),

@@ -354,7 +354,5 @@ export function getSignatureParameters(signature: Signature) {
     r: signature.signature.slice(0, 32),
     s: signature.signature.slice(32, 64),
     v: signature.recovery,
-    // TODO: research which one should be used
-    // v: signature.recovery + 27,
   }
 }
