@@ -12,9 +12,11 @@ import * as constants from './constants';
 import { HoprChannels } from './tsc/web3/HoprChannels';
 import { HoprToken } from './tsc/web3/HoprToken';
 import Account from './account';
+import HashedSecret from './hashedSecret';
 export default class HoprEthereum implements HoprCoreConnector {
     db: LevelUp;
     web3: Web3;
+    chainId: number;
     network: addresses.Networks;
     hoprChannels: HoprChannels;
     hoprToken: HoprToken;
@@ -23,7 +25,6 @@ export default class HoprEthereum implements HoprCoreConnector {
     };
     private _status;
     private _initializing;
-    _onChainValuesInitialized: boolean;
     private _starting;
     private _stopping;
     signTransaction: ReturnType<typeof utils.TransactionSigner>;
@@ -33,21 +34,14 @@ export default class HoprEthereum implements HoprCoreConnector {
     indexer: Indexer;
     account: Account;
     tickets: Tickets;
-    constructor(db: LevelUp, web3: Web3, network: addresses.Networks, hoprChannels: HoprChannels, hoprToken: HoprToken, options: {
+    hashedSecret: HashedSecret;
+    constructor(db: LevelUp, web3: Web3, chainId: number, network: addresses.Networks, hoprChannels: HoprChannels, hoprToken: HoprToken, options: {
         debug: boolean;
     }, privateKey: Uint8Array, publicKey: Uint8Array);
     readonly dbKeys: typeof dbkeys;
     readonly utils: typeof utils;
     readonly constants: typeof constants;
     readonly CHAIN_NAME = "HOPR on Ethereum";
-    /**
-     * Returns the current balances of the account associated with this node (HOPR)
-     * @returns a promise resolved to Balance
-     */
-    /**
-     * Returns the current native balance (ETH)
-     * @returns a promise resolved to Balance
-     */
     /**
      * Initialises the connector, e.g. connect to a blockchain node.
      */
@@ -68,20 +62,10 @@ export default class HoprEthereum implements HoprCoreConnector {
      */
     initialize(): Promise<void>;
     /**
-     * Checks whether node has an account secret set onchain and offchain
-     * @returns a promise resolved true if secret is set correctly
-     */
-    checkAccountSecret(): Promise<void>;
-    /**
-     * generate and set account secret
-     */
-    setAccountSecret(nonce?: number): Promise<void>;
-    /**
      * Checks whether web3 connection is alive
      * @returns a promise resolved true if web3 connection is alive
      */
     checkWeb3(): Promise<void>;
-    private getDebugAccountSecret;
     static get constants(): typeof constants;
     /**
      * Creates an uninitialised instance.
