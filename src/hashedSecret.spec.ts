@@ -11,6 +11,7 @@ import { Ganache } from '@hoprnet/hopr-testing'
 import { migrate, fund } from '@hoprnet/hopr-ethereum'
 import { NODE_SEEDS } from '@hoprnet/hopr-demo-seeds'
 import Web3 from 'web3'
+import * as testconfigs from './config.spec'
 import * as configs from './config'
 import HoprChannelsAbi from '@hoprnet/hopr-ethereum/build/extracted/abis/HoprChannels.json'
 import Account from './account'
@@ -41,8 +42,8 @@ describe('test hashedSecret management', function () {
 
     connector.account = new Account(
       connector,
-      stringToU8a(configs.DEMO_ACCOUNTS[0]),
-      await Utils.privKeyToPubKey(stringToU8a(configs.DEMO_ACCOUNTS[0]))
+      stringToU8a(testconfigs.DEMO_ACCOUNTS[0]),
+      await Utils.privKeyToPubKey(stringToU8a(testconfigs.DEMO_ACCOUNTS[0]))
     )
 
     connector.hashedSecret = new PreImage(connector)
