@@ -1,13 +1,15 @@
 import assert from 'assert'
 import Web3 from 'web3'
 import { stringToU8a, u8aEquals } from '@hoprnet/hopr-utils'
-import { Ganache, migrate, fund } from '@hoprnet/hopr-ethereum'
+import { Ganache } from '@hoprnet/hopr-testing'
+import { migrate, fund } from '@hoprnet/hopr-ethereum'
 import HoprTokenAbi from '@hoprnet/hopr-ethereum/build/extracted/abis/HoprToken.json'
 import HoprEthereum from '.'
 import { HoprToken } from './tsc/web3/HoprToken'
 import { Await } from './tsc/utils'
 import { cleanupPromiEvent } from './utils'
 import { createNode, getPrivKeyData, createAccountAndFund } from './utils/testing'
+import * as testconfigs from './config.spec'
 import * as configs from './config'
 import { randomBytes } from 'crypto'
 
@@ -25,7 +27,7 @@ describe('test connector', function () {
     await migrate()
     await fund(2)
 
-    owner = await getPrivKeyData(stringToU8a(configs.FUND_ACCOUNT_PRIVATE_KEY))
+    owner = await getPrivKeyData(stringToU8a(testconfigs.FUND_ACCOUNT_PRIVATE_KEY))
     web3 = new Web3(configs.DEFAULT_URI)
     hoprToken = new web3.eth.Contract(HoprTokenAbi as any, configs.TOKEN_ADDRESSES.private)
     connector = await createNode(owner.privKey)
