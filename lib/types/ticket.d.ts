@@ -1,6 +1,6 @@
 import type { Types } from '@hoprnet/hopr-core-connector-interface';
 import BN from 'bn.js';
-import { Hash, TicketEpoch, Balance } from '.';
+import { Hash, TicketEpoch, Balance, Signature } from '.';
 import { Uint8ArrayE } from '../types/extended';
 declare class Ticket extends Uint8ArrayE implements Types.Ticket {
     constructor(arr?: {
@@ -32,7 +32,7 @@ declare class Ticket extends Uint8ArrayE implements Types.Ticket {
     sign(privKey: Uint8Array, pubKey: Uint8Array, arr?: {
         bytes: ArrayBuffer;
         offset: number;
-    }): Promise<Types.Signature>;
+    }): Promise<Signature>;
     static create(arr?: {
         bytes: ArrayBuffer;
         offset: number;
