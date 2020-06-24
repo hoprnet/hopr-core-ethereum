@@ -1,9 +1,9 @@
 import type { Types } from '@hoprnet/hopr-core-connector-interface'
 import BN from 'bn.js'
-import { u8aConcat, stringToU8a, u8aToHex } from '@hoprnet/hopr-utils'
+import { stringToU8a, u8aToHex } from '@hoprnet/hopr-utils'
 import { Hash, TicketEpoch, Balance, Signature } from '.'
 import { Uint8ArrayE } from '../types/extended'
-import { hash, sign } from '../utils'
+import { sign } from '../utils'
 //
 import Web3 from 'web3'
 const web3 = new Web3()
@@ -118,7 +118,16 @@ class Ticket extends Uint8ArrayE implements Types.Ticket {
   }
 
   get hash() {
-    return hash(this)
+    const encodedTicket = encode([
+      { type: 'bytes32', value: u8aToHex(this.channelId) },
+      { type: 'bytes32', value: u8aToHex(this.challenge) },
+      { type: 'bytes32', value: u8aToHex(this.onChainSecret) },
+      { type: 'uint256', value: this.epoch.toString() },
+      { type: 'uint256', value: this.amount.toString() },
+      { type: 'bytes32', value: u8aToHex(this.winProb) },
+    ])
+
+    return toEthSignedMessageHash(encodedTicket)
   }
 
   static get SIZE(): number {
@@ -137,16 +146,7 @@ class Ticket extends Uint8ArrayE implements Types.Ticket {
       offset: number
     }
   ): Promise<Signature> {
-    const encodedTicket = encode([
-      { type: 'bytes32', value: u8aToHex(this.channelId) },
-      { type: 'bytes32', value: u8aToHex(this.challenge) },
-      { type: 'bytes32', value: u8aToHex(this.onChainSecret) },
-      { type: 'uint256', value: this.epoch.toString() },
-      { type: 'uint256', value: this.amount.toString() },
-      { type: 'bytes32', value: u8aToHex(this.winProb) },
-    ])
-
-    return sign(toEthSignedMessageHash(encodedTicket), privKey, undefined, arr)
+    return sign(this.hash, privKey, undefined, arr)
   }
 
   static create(
