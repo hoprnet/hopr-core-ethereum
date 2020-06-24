@@ -1,6 +1,6 @@
 import type IChannel from '.'
 import BN from 'bn.js'
-import { u8aToHex, u8aXOR, stringToU8a } from '@hoprnet/hopr-utils'
+import { u8aToHex, stringToU8a } from '@hoprnet/hopr-utils'
 import { Hash, TicketEpoch, Balance, SignedTicket, Ticket } from '../types'
 
 const DEFAULT_WIN_PROB = new BN(1)
@@ -35,6 +35,16 @@ class TicketFactory {
       })
 
     const signedTicket = new SignedTicket(arr)
+
+    // console.log('create', {
+    //   creator: (await this.channel.coreConnector.account.address).toHex(),
+    //   channelId: channelId.toHex(),
+    //   challenge: challenge.toHex(),
+    //   epoch: epoch.toString(),
+    //   amount: amount.toString(),
+    //   winProb: winProb.toHex(),
+    //   onChainSecret: onChainSecret.toHex(),
+    // })
 
     const ticket = new Ticket(
       {
@@ -78,9 +88,32 @@ class TicketFactory {
     const { hoprChannels, signTransaction, account, utils } = this.channel.coreConnector
     const { ticket, signature } = signedTicket
     const { r, s, v } = utils.getSignatureParameters(signature)
+
+    // console.log('submit', {
+    //   submitter: (await this.channel.coreConnector.account.address).toHex(),
+    //   channelId: ticket.channelId.toHex(),
+    //   challenge: ticket.challenge.toHex(),
+    //   epoch: ticket.epoch.toString(),
+    //   amount: ticket.amount.toString(),
+    //   winProb: ticket.winProb.toHex(),
+    //   onChainSecret: ticket.onChainSecret.toHex(),
+    // })
+
     const pre_image = await this.channel.coreConnector.hashedSecret
       .getPreimage(ticket.onChainSecret)
       .then((res) => res.preImage)
+
+    // console.log('submit-redeemTicket', {
+    //   pre_image: u8aToHex(pre_image),
+    //   channelId: u8aToHex(ticket.channelId),
+    //   secretA: u8aToHex(secretA),
+    //   secretB: u8aToHex(secretB),
+    //   amount: ticket.amount.toString(),
+    //   winProb: u8aToHex(ticket.winProb),
+    //   r: u8aToHex(r),
+    //   s: u8aToHex(s),
+    //   v: v + 27,
+    // })
 
     const transaction = await signTransaction(
       hoprChannels.methods.redeemTicket(
@@ -92,7 +125,7 @@ class TicketFactory {
         u8aToHex(ticket.winProb),
         u8aToHex(r),
         u8aToHex(s),
-        v
+        v + 27
       ),
       {
         from: (await account.address).toHex(),
@@ -101,8 +134,7 @@ class TicketFactory {
       }
     )
 
-    const receipt = await transaction.send()
-    console.log(receipt)
+    await transaction.send()
   }
 }
 

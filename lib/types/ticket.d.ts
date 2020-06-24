@@ -26,7 +26,7 @@ declare class Ticket extends Uint8ArrayE implements Types.Ticket {
     get winProb(): Hash;
     get onChainSecretOffset(): number;
     get onChainSecret(): Hash;
-    get hash(): Promise<Hash>;
+    get hash(): Hash;
     static get SIZE(): number;
     getEmbeddedFunds(): BN;
     sign(privKey: Uint8Array, pubKey: Uint8Array, arr?: {
