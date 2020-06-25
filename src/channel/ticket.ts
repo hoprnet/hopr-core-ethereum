@@ -36,16 +36,6 @@ class TicketFactory {
 
     const signedTicket = new SignedTicket(arr)
 
-    // console.log('create', {
-    //   creator: (await this.channel.coreConnector.account.address).toHex(),
-    //   channelId: channelId.toHex(),
-    //   challenge: challenge.toHex(),
-    //   epoch: epoch.toString(),
-    //   amount: amount.toString(),
-    //   winProb: winProb.toHex(),
-    //   onChainSecret: onChainSecret.toHex(),
-    // })
-
     const ticket = new Ticket(
       {
         bytes: signedTicket.buffer,
@@ -89,31 +79,9 @@ class TicketFactory {
     const { ticket, signature } = signedTicket
     const { r, s, v } = utils.getSignatureParameters(signature)
 
-    // console.log('submit', {
-    //   submitter: (await this.channel.coreConnector.account.address).toHex(),
-    //   channelId: ticket.channelId.toHex(),
-    //   challenge: ticket.challenge.toHex(),
-    //   epoch: ticket.epoch.toString(),
-    //   amount: ticket.amount.toString(),
-    //   winProb: ticket.winProb.toHex(),
-    //   onChainSecret: ticket.onChainSecret.toHex(),
-    // })
-
     const pre_image = await this.channel.coreConnector.hashedSecret
       .getPreimage(ticket.onChainSecret)
       .then((res) => res.preImage)
-
-    // console.log('submit-redeemTicket', {
-    //   pre_image: u8aToHex(pre_image),
-    //   channelId: u8aToHex(ticket.channelId),
-    //   secretA: u8aToHex(secretA),
-    //   secretB: u8aToHex(secretB),
-    //   amount: ticket.amount.toString(),
-    //   winProb: u8aToHex(ticket.winProb),
-    //   r: u8aToHex(r),
-    //   s: u8aToHex(s),
-    //   v: v + 27,
-    // })
 
     const transaction = await signTransaction(
       hoprChannels.methods.redeemTicket(

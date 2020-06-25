@@ -174,9 +174,12 @@ describe('test Channel class', function () {
 
     assert(await counterpartysChannel.ticket.verify(signedTicket), `Ticket signature must be valid.`)
 
-    assert.doesNotReject(
-      counterpartysChannel.ticket.submit(signedTicket, secretA, secretB),
-      'Ticket redemption rejected.'
-    )
+    await counterpartysChannel.ticket.submit(signedTicket, secretA, secretB)
+    const hashedSecret = await counterpartysChannel.coreConnector.hoprChannels.methods
+      .accounts((await counterpartysChannel.coreConnector.account.address).toHex())
+      .call()
+      .then((res) => res.hashedSecret)
+
+    assert.notEqual(hashedSecret, signedTicket.ticket.onChainSecret.toHex(), 'Ticket redemption failed.')
   })
 })
