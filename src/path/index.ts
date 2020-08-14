@@ -16,15 +16,12 @@ class Path {
     while (openList.length > 0) {
       current = openList.pop() as Public
 
-      const newNodes = (await this.coreConnector.indexer.get({ partyA: current })).map((result) => {
-        console.log(`partyA`, result)
-
-        return result.partyA
-        // if (current.eq(partyA)) {
-        //   return partyB
-        // } else {
-        //   return partyA
-        // }
+      const newNodes = (await this.coreConnector.indexer.get({ partyA: current })).map(({ partyA, partyB }) => {
+        if (current.eq(partyA)) {
+          return partyB
+        } else {
+          return partyA
+        }
       })
 
       if (fScore.get(current) == targetLength) {
@@ -36,9 +33,9 @@ class Path {
           current = cameFrom.get(current)
         }
 
-        if (current.eq(start)) {
-          throw Error(`Wrong path!`)
-        }
+        // if (current.eq(start)) {
+        //   throw Error(`Wrong path!`)
+        // }
 
         return path
       }
@@ -70,7 +67,7 @@ class Path {
           }
         }
 
-        cameFrom.set(newNodes[i], start)
+        cameFrom.set(newNodes[i], current)
         fScore.set(newNodes[i], fScore.get(current) + 1)
 
         if (!found) {

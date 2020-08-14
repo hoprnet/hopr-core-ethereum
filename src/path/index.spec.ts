@@ -46,6 +46,7 @@ function generateConnector(nodes: Public[], edges: Map<Public, Public[]>) {
 
         return connectedNodes.map((partyB) => {
           return {
+            partyA,
             partyB,
           }
         })
