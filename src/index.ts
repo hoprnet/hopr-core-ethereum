@@ -17,6 +17,7 @@ import type { HoprChannels } from './tsc/web3/HoprChannels'
 import type { HoprToken } from './tsc/web3/HoprToken'
 import Account from './account'
 import HashedSecret from './hashedSecret'
+import Path from './path'
 
 export default class HoprEthereum implements HoprCoreConnector {
   private _status: 'uninitialized' | 'initialized' | 'started' | 'stopped' = 'uninitialized'
@@ -32,6 +33,7 @@ export default class HoprEthereum implements HoprCoreConnector {
   public account: Account
   public tickets: Tickets
   public hashedSecret: HashedSecret
+  public path: Path
 
   constructor(
     public db: LevelUp,
@@ -52,6 +54,7 @@ export default class HoprEthereum implements HoprCoreConnector {
     this.tickets = new Tickets(this)
     this.types = new types()
     this.channel = new ChannelFactory(this)
+    this.path = new Path(this)
 
     this.signTransaction = utils.TransactionSigner(web3, privateKey)
     this.log = utils.Log()
