@@ -195,7 +195,8 @@ class Indexer implements IIndexer {
       return this.getAll()
     } else if (query.partyA != null && query.partyB != null) {
       // both parties provided, get channel
-      return [await this.getSingle(query.partyA, query.partyB)]
+      const channel = await this.getSingle(query.partyA, query.partyB)
+      return channel == null ? [] : [channel]
     } else {
       // only one of the parties provided, get all open channels of party
       return this.getAll(query.partyA != null ? query.partyA : query.partyB)
@@ -205,6 +206,7 @@ class Indexer implements IIndexer {
   private async store(partyA: Public, partyB: Public, channelEntry: ChannelEntry): Promise<void> {
     const { dbKeys, db } = this.connector
     const { blockNumber, logIndex, transactionIndex } = channelEntry
+
     this.log(
       `storing channel ${partyA.toHex()}-${partyB.toHex()}:${blockNumber.toString()}-${transactionIndex.toString()}-${logIndex.toString()}`
     )
