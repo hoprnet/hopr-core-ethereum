@@ -1,8 +1,8 @@
-import type { addresses } from '@hoprnet/hopr-ethereum'
+import type { Networks } from './ethereum/addresses'
 import Web3 from 'web3'
 import type { LevelUp } from 'levelup'
-import HoprChannelsAbi from '@hoprnet/hopr-ethereum/build/extracted/abis/HoprChannels.json'
-import HoprTokenAbi from '@hoprnet/hopr-ethereum/build/extracted/abis/HoprToken.json'
+import HoprChannelsAbi from './ethereum/abi/HoprChannels.json'
+import HoprTokenAbi from './ethereum/abi/HoprToken.json'
 import type HoprCoreConnector from '@hoprnet/hopr-core-connector-interface'
 import chalk from 'chalk'
 import { ChannelFactory } from './channel'
@@ -39,7 +39,7 @@ export default class HoprEthereum implements HoprCoreConnector {
     public db: LevelUp,
     public web3: Web3,
     public chainId: number,
-    public network: addresses.Networks,
+    public network: Networks,
     public hoprChannels: HoprChannels,
     public hoprToken: HoprToken,
     public options: {
@@ -251,7 +251,7 @@ export default class HoprEthereum implements HoprCoreConnector {
       utils.getChainId(web3),
       utils.privKeyToPubKey(seed),
     ])
-    const network = utils.getNetworkName(chainId)
+    const network = utils.getNetworkName(chainId) as Networks
 
     if (typeof config.CHANNELS_ADDRESSES[network] === 'undefined') {
       throw Error(`channel contract address from network ${network} not found`)
