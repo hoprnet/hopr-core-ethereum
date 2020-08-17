@@ -16,8 +16,6 @@
     "prepare": "yarn build"
   },
   "files": [
-    "!**/*.spec.ts",
-    "src/",
     "lib/",
     "README.md"
   ],
