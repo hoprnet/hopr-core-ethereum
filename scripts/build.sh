@@ -8,7 +8,7 @@ cp ./node_modules/@hoprnet/hopr-ethereum/build/lib/scripts/addresses.* src/ether
 # Compile our Typescript sources
 yarn run tsc;
 
-# Copy generated TypeChain files
+# Copy generated TypeChain files into lib folder
 cp -R ./src/tsc/web3 ./lib/tsc/web3;
 
 # Copy Ganache workaround
