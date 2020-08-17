@@ -19,3 +19,6 @@ src/tsc/web3
 
 # Typescript builds
 lib/
+
+# Ethereum artifacts
+src/ethereum
