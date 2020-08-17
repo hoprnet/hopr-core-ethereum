@@ -59,13 +59,20 @@ function generateConnector(nodes: Public[], edges: Map<Public, Public[]>) {
   return connector
 }
 
+function checkGraph(path: Public[], edges: Map<Public, Public[]>) {
+  for (let i = 0; i < path.length - 1; i++) {
+    const edge = edges.get(path[i])
+    assert(edge != null && edge.includes(path[i + 1]))
+  }
+}
+
 describe('test pathfinder', function () {
-  const graph = []
   it('should find a path', async function () {
     const { nodes, edges } = await generateGraph()
 
     const connector = generateConnector(nodes, edges)
 
-    console.log(await connector.path.findPath(nodes[0], 3))
+    const path = await connector.path.findPath(nodes[0], 4)
+    checkGraph(path, edges)
   })
 })

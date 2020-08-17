@@ -16,14 +16,6 @@ class Path {
     while (openList.length > 0) {
       current = openList.pop() as Public
 
-      const newNodes = (await this.coreConnector.indexer.get({ partyA: current })).map(({ partyA, partyB }) => {
-        if (current.eq(partyA)) {
-          return partyB
-        } else {
-          return partyA
-        }
-      })
-
       if (fScore.get(current) == targetLength) {
         const path: Public[] = Array.from({ length: targetLength })
 
@@ -45,12 +37,21 @@ class Path {
       const add: Public[] = []
 
       let found: boolean
+      let newNode: Public
 
-      for (let i = 0; i < newNodes.length; i++) {
+      const _newNodes = await this.coreConnector.indexer.get({ partyA: current })
+
+      for (let i = 0; i < _newNodes.length; i++) {
         found = false
 
+        if (current.eq(_newNodes[i].partyA)) {
+          newNode = _newNodes[i].partyB
+        } else {
+          newNode = _newNodes[i].partyA
+        }
+
         for (let j = 0; j < closedList.length; j++) {
-          if (closedList[j].eq(newNodes[i])) {
+          if (closedList[j].eq(newNode)) {
             found = true
             break
           }
@@ -61,17 +62,17 @@ class Path {
         }
 
         for (let j = 0; j < openList.length; j++) {
-          if (openList[j].eq(newNodes[i])) {
+          if (openList[j].eq(newNode)) {
             found = true
             break
           }
         }
 
-        cameFrom.set(newNodes[i], current)
-        fScore.set(newNodes[i], fScore.get(current) + 1)
+        cameFrom.set(newNode, current)
+        fScore.set(newNode, fScore.get(current) + 1)
 
         if (!found) {
-          add.push(newNodes[i])
+          add.push(newNode)
         }
       }
 
