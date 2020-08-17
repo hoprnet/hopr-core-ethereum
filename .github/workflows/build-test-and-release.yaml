@@ -58,7 +58,7 @@ jobs:
         uses: actions/cache@v1
         with:
           path: node_modules
-          key: ${{ runner.OS }}-${{ matrix.node-version }}-build-${{ hashFiles(env.pkgPath) }}
+          key: ${{ runner.OS }}-${{ matrix.node-version }}-build-${{ hashFiles('**/yarn.lock') }}
       - name: Install node modules
         working-directory: ${{ env.workDir }}
         if: steps.cache-modules.outputs.cache-hit != 'true'
@@ -105,7 +105,7 @@ jobs:
         uses: actions/cache@v1
         with:
           path: node_modules
-          key: ${{ runner.OS }}-${{ matrix.node-version }}-build-${{ hashFiles(env.pkgPath) }}
+          key: ${{ runner.OS }}-${{ matrix.node-version }}-build-${{ hashFiles('**/yarn.lock') }}
       - name: Install node modules
         working-directory: ${{ env.workDir }}
         if: steps.cache-modules.outputs.cache-hit != 'true'
@@ -152,7 +152,7 @@ jobs:
         uses: actions/cache@v1
         with:
           path: node_modules
-          key: ${{ runner.OS }}-${{ matrix.node-version }}-build-${{ hashFiles(env.pkgPath) }}
+          key: ${{ runner.OS }}-${{ matrix.node-version }}-build-${{ hashFiles('**/yarn.lock') }}
       - name: Install node modules
         working-directory: ${{ env.workDir }}
         if: steps.cache-modules.outputs.cache-hit != 'true'
