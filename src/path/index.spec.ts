@@ -67,11 +67,11 @@ async function generateGraph(nodesCount: number) {
   for (let i = 0; i < nodesCount; i++) {
     const a = nodes[i % nodesCount]
     const b = nodes[(i + generator) % nodesCount]
-    const c = nodes[(i + 1) % nodesCount]
-    // const d = nodes[(i + thirdGenerator) % nodesCount]
+    const c = nodes[(i + secondGenerator) % nodesCount]
+    const d = nodes[(i + thirdGenerator) % nodesCount]
 
     const nodesFromA = edges.get(a) || []
-    nodesFromA.push(b, c)
+    nodesFromA.push(b, c, d)
     edges.set(a, nodesFromA)
   }
 
@@ -131,11 +131,11 @@ function noCircles(path: Public[]) {
 
 describe('test pathfinder', function () {
   it('should find a path', async function () {
-    const { nodes, edges } = await generateGraph(33)
+    const { nodes, edges } = await generateGraph(123)
 
     const connector = generateConnector(edges)
 
-    const path = await connector.path.findPath(nodes[0], 32)
+    const path = await connector.path.findPath(nodes[0], 122)
     console.log(path)
 
     assert(path.length == 30, 'Should find a valid acyclic path that goes through all nodes')

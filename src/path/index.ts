@@ -143,10 +143,6 @@ class Path {
     type Entry = [Public | undefined, Public, number]
 
     const cameFrom = new Map<Public, Heap<Entry>>()
-    const initial = new Heap<Entry>(comparator)
-
-    initial.push([undefined, start, 0])
-    cameFrom.set(start, initial)
 
     const open = new Heap<Entry>(comparator)
     const closed = new Set<string>()
@@ -225,8 +221,26 @@ class Path {
           entries = new Heap<Entry>(comparator)
         }
 
-        entries.push(newEntry)
+        let alreadyExists = false
+        for (let j = 0; j < entries.length; j++) {
+          if (entries.heapArray[j][0].eq(newEntry[0]) && entries.heapArray[j][1].eq(newEntry[1])) {
+            entries.heapArray[j][2] = newEntry[2]
+            alreadyExists = true
+            entries.init()
+          }
+        }
+
+        if (!alreadyExists) {
+          entries.push(newEntry)
+        }
+
         cameFrom.set(newNode, entries)
+
+        // if (!entries.contains(newEntry, (a: Entry, b: Entry) => {
+        //   return a[0].eq(b[0]) && a[1].eq(b[1])
+        // })) {
+        //   console.log(`already in entries`)
+        // }
 
         let found = false
 
