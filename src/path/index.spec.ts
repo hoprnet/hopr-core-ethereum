@@ -1,4 +1,4 @@
-import assert, { notDeepEqual } from 'assert'
+import assert from 'assert'
 import type HoprEthereum from '..'
 import { randomBytes } from 'crypto'
 import { Public } from '../types'
@@ -131,24 +131,15 @@ function noCircles(path: Public[]) {
 
 describe('test pathfinder', function () {
   it('should find a path', async function () {
-    const { nodes, edges } = await generateGraph(123)
+    const { nodes, edges } = await generateGraph(101)
 
     const connector = generateConnector(edges)
 
-    const path = await connector.path.findPath(nodes[0], 122)
-    console.log(path)
+    const path = await connector.path.findPath(nodes[0], 8)
 
-    assert(path.length == 30, 'Should find a valid acyclic path that goes through all nodes')
-
-    // const noPath = await connector.path.findPath(nodes[0], 29, (node: Public) => !node.eq(nodes[1]))
-
-    // assert(noPath.length == 0)
-
-    // const shorterPath = await connector.path.findPath(nodes[0], 27, (node: Public) => !node.eq(nodes[1]))
-
-    // console.log(shorterPath)
-    // assert(shorterPath.length == 28 && validPath(path, edges) && noCircles(path))
+    assert(
+      path.length == 8 && noCircles(path) && validPath(path, edges),
+      'Should find a valid acyclic path that goes through all nodes'
+    )
   })
-
-  //it('should find a path without a certain node', async function () {})
 })

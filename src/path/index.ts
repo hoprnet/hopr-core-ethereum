@@ -1,160 +1,110 @@
 import type HoprEthereum from '../'
 import { Public } from '../types'
 import Heap from 'heap-js'
-import { u8aToHex } from '@hoprnet/hopr-utils'
+import { randomInteger } from '@hoprnet/hopr-utils'
 
-function reconstructPath(cameFrom: Map<Public, Public>, current: Public, targetLength: number) {
-  const path: Public[] = Array.from({ length: targetLength })
+type Path = Public[]
 
-  for (let i = 0; i < targetLength; i++) {
-    path[targetLength - i - 1] = current
+/**
+ * returns a - b, "a without b", assuming
+ * |a| >> |b|, "a much larger than b"
+ * @param a
+ * @param b
+ */
+function without(a: Public[], b: Public[], filter?: (node: Public) => boolean): Public[] {
+  const toDelete: number[] = []
 
-    current = cameFrom.get(current)
+  for (let i = 0; i < a.length; i++) {
+    if (b.includes(a[i]) || (filter != null && !filter(a[i]))) {
+      toDelete.push(i)
+    }
   }
 
-  return path
+  for (let i = 0; i < toDelete.length; i++) {
+    a.splice(toDelete[i] - i, 1)
+  }
+
+  return a
 }
 
-class Path {
+class PathFinder {
   constructor(private coreConnector: HoprEthereum) {}
 
-  async findPath(start: Public, targetLength: number, filter?: (node: Public) => boolean): Promise<Public[]> {
-    const comparator = (a: Entry, b: Entry) => b[2] - a[2]
-    type Entry = [Public | undefined, Public, number]
+  async findPath(
+    start: Public,
+    targetLength: number,
+    maxIterations: number,
+    filter?: (node: Public) => boolean
+  ): Promise<Public[]> {
+    const compare = (a: Path, b: Path) => b.length - a.length
 
-    const cameFrom = new Map<Public, Heap<Entry>>()
+    let queue = new Heap<Path>(compare)
 
-    const open = new Heap<Entry>(comparator)
-    const closed = new Set<string>()
-
-    open.add([undefined, start, 0])
-
-    let current: Entry
-    let newNode: Public
-    let entries: Heap<Entry>
-
-    let found
-    while (open.length > 0) {
-      current = open.pop() as Entry
-
-      found = false
-
-      // check for cycles
-      let tmp = cameFrom.get(current[0])
-      console.log(`tmp before cycle iteration`, tmp)
-
-      let nodes: Public[] = [current[1]]
-      while (tmp != null && tmp.peek() != null && tmp.peek()[0] != null) {
-        const entry = tmp.peek() as Entry
-
-        console.log(`cycle iteration`)
-
-        if (nodes.includes(entry[1])) {
-          console.log(`cycle found`)
-
-          tmp.pop()
-
-          if (tmp.length == 0) {
-            cameFrom.delete(entry[1])
-          } else {
-            cameFrom.set(entry[1], tmp)
-          }
-
-          found = true
-          break
+    // Preprocessing
+    queue.addAll(
+      (await this.coreConnector.indexer.get({ partyA: start })).map((channel) => {
+        if (start.eq(channel.partyA)) {
+          return [channel.partyB]
+        } else {
+          return [channel.partyA]
         }
+      })
+    )
 
-        tmp = cameFrom.get(entry[0])
-        nodes.push(entry[1])
+    let iterations = 0
 
-        console.log(`nextIteration`, tmp)
+    while (queue.length > 0 && iterations++ < maxIterations) {
+      iterations++
+      const currentPath = queue.peek() as Path
+
+      if (currentPath.length == targetLength) {
+        console.log(`iterations`, iterations)
+        return currentPath
       }
 
-      if (found) {
-        console.log(`next edge`)
+      const lastNode = currentPath[currentPath.length - 1]
+
+      const newNodes = (await this.coreConnector.indexer.get({ partyA: lastNode })).map((channel) => {
+        if (lastNode.eq(channel.partyA)) {
+          return channel.partyB
+        } else {
+          return channel.partyA
+        }
+      })
+
+      if (newNodes.length == 0) {
+        queue.pop()
         continue
       }
 
-      if (current[2] == targetLength) {
-        console.log(`found`)
-        return []
-        // reconstructPath
+      without(newNodes, currentPath, filter)
+
+      if (newNodes.length == 0) {
+        queue.pop()
+        continue
       }
 
-      const _newNodes = await this.coreConnector.indexer.get({ partyA: current[1] })
+      let nextNode: Public = newNodes[randomInteger(0, newNodes.length)]
 
-      console.log(`newNodes`, _newNodes.length)
-
-      for (let i = 0; i < _newNodes.length; i++) {
-        if (current[1].eq(_newNodes[i].partyA)) {
-          newNode = _newNodes[i].partyB
-        } else {
-          newNode = _newNodes[i].partyA
+      if (nextNode.eq(lastNode)) {
+        if (newNodes.length == 1) {
+          queue.pop()
         }
-
-        const newEntry: Entry = [current[1], newNode, current[2] + 1]
-
-        if (cameFrom.has(newNode)) {
-          entries = cameFrom.get(newNode)
-        } else {
-          entries = new Heap<Entry>(comparator)
-        }
-
-        let alreadyExists = false
-        for (let j = 0; j < entries.length; j++) {
-          if (entries.heapArray[j][0].eq(newEntry[0]) && entries.heapArray[j][1].eq(newEntry[1])) {
-            entries.heapArray[j][2] = newEntry[2]
-            alreadyExists = true
-            entries.init()
-          }
-        }
-
-        if (!alreadyExists) {
-          entries.push(newEntry)
-        }
-
-        cameFrom.set(newNode, entries)
-
-        // if (!entries.contains(newEntry, (a: Entry, b: Entry) => {
-        //   return a[0].eq(b[0]) && a[1].eq(b[1])
-        // })) {
-        //   console.log(`already in entries`)
-        // }
-
-        let found = false
-
-        if (open.heapArray != null && open.heapArray.length != 0) {
-          for (let j = 0; j < open.heapArray.length; j++) {
-            if (open.heapArray[j][0].eq(current[1]) && open.heapArray[j][1].eq(newNode)) {
-              found = true
-              console.log(`duplicate found`)
-              break
-            }
-          }
-        }
-
-        if (!found) {
-          open.add(newEntry)
-        }
+        continue
       }
 
-      closed.add(u8aToHex(current[0] || new Uint8Array()).concat(u8aToHex(current[1])))
+      const toPush = Array.from(currentPath)
+      toPush.push(nextNode)
 
-      if (_newNodes.length == 0) {
-        const entries = cameFrom.get(current[1])
-
-        entries.pop()
-
-        if (entries.length == 0) {
-          cameFrom.delete(current[1])
-        } else {
-          cameFrom.set(current[1], entries)
-        }
-      }
+      queue.push(toPush)
     }
 
-    return []
+    if (queue.length > 0) {
+      return queue.peek()
+    } else {
+      return []
+    }
   }
 }
 
-export default Path
+export default PathFinder
