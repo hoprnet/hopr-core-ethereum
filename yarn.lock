@@ -183,10 +183,10 @@
     "@ethersproject/rlp" "^5.0.0"
     "@ethersproject/signing-key" "^5.0.0"
 
-"@hoprnet/hopr-core-connector-interface@1.5.2":
-  version "1.5.2"
-  resolved "https://registry.yarnpkg.com/@hoprnet/hopr-core-connector-interface/-/hopr-core-connector-interface-1.5.2.tgz#df5fc35ea0c004837c21ffb9edbd7410196f0dc5"
-  integrity sha512-MJ9RZUAO2e1Oten1eRLJORS/K9udArWHow2r9VHMj82Uf3WcbIhjPLDYHxNa/HyAo1mrqargvINlC1yui5yW4w==
+"@hoprnet/hopr-core-connector-interface@1.5.6":
+  version "1.5.6"
+  resolved "https://registry.yarnpkg.com/@hoprnet/hopr-core-connector-interface/-/hopr-core-connector-interface-1.5.6.tgz#ded55ed9b041efcfe3da6e2c37eb330fa5bebac1"
+  integrity sha512-3wbVxCq22O0l0dqHzEZ1IVP27Q6TuG122yPRbctso3hGdr0L98QTvTvaHIRkDKKS7SNbc4uqwdT/zDobLTaxXw==
 
 "@hoprnet/hopr-demo-seeds@1.8", "@hoprnet/hopr-demo-seeds@1.8.0":
   version "1.8.0"
