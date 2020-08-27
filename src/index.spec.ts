@@ -22,7 +22,7 @@ describe('test connector', function () {
   let connector: HoprEthereum
 
   before(async function () {
-    this.timeout(60e3)
+    this.timeout(30e3)
 
     await ganache.start()
     await migrate()
@@ -103,6 +103,19 @@ describe('test connector', function () {
         }
       })
     })
+  })
+
+  it('should catch initOnchainValues', async function () {
+    this.timeout(10e3)
+
+    const connector = await createNode(stringToU8a(NODE_SEEDS[NODE_SEEDS.length - 1]))
+
+    try {
+      await connector.initOnchainValues()
+      assert(true)
+    } catch (err) {
+      assert(false, err)
+    }
   })
 })
 

@@ -155,7 +155,12 @@ export default class HoprEthereum implements HoprCoreConnector {
    * @param nonce optional specify nonce of the account to run multiple queries simultaneously
    */
   async initOnchainValues(nonce?: number): Promise<void> {
-    await this.hashedSecret.submit(nonce)
+    try {
+      await this.hashedSecret.submit(nonce)
+    } catch (err) {
+      this.log(chalk.red('Unable to submit secret'))
+      this.log(chalk.red(err.message))
+    }
   }
 
   /**
