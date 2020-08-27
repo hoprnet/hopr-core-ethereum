@@ -304,7 +304,7 @@ export default class HoprEthereum implements HoprCoreConnector {
       seed,
       publicKey
     )
-    coreConnector.log(`using ethereum address ${(await coreConnector.account.address).toHex()}`)
+    coreConnector.log(`using blockchain address ${(await coreConnector.account.address).toHex()}`)
 
     // begin initializing
     coreConnector.initialize().catch((err: Error) => {
