@@ -264,6 +264,10 @@ export function getNetworkName(chainId: number): addresses.Networks {
       return 'goerli'
     case 42:
       return 'kovan'
+    case 77:
+      return 'solkol'
+    case 100:
+      return 'xdai'
     default:
       return 'private'
   }

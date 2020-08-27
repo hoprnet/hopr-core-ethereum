@@ -195,10 +195,10 @@
   dependencies:
     micro "^9.3.4"
 
-"@hoprnet/hopr-ethereum@^1.0.0":
-  version "1.0.0"
-  resolved "https://registry.yarnpkg.com/@hoprnet/hopr-ethereum/-/hopr-ethereum-1.0.0.tgz#c8e6664c173d94ead357bf62e3670f6569d3f232"
-  integrity sha512-hSfY3FL8uatrD9xahLyTqGRmvuK/3wE+TaIDip1tC01BFBhEBzghunL96P2GW562ZGr+/6XCezzYINUPEtaCaw==
+"@hoprnet/hopr-ethereum@^1.1.1-xdai":
+  version "1.1.1-xdai"
+  resolved "https://registry.yarnpkg.com/@hoprnet/hopr-ethereum/-/hopr-ethereum-1.1.1-xdai.tgz#f87763bc60e9ff61d62d679678d2a82ab67b057d"
+  integrity sha512-kVd4kkRlRHWJnV+JEA6WvXnLKcze5AAivuLTBqEjv1JBXWD25FCnUiRcASd11+gSwGlw7RdFNgHE2evUnJREvQ==
   dependencies:
     "@hoprnet/hopr-demo-seeds" "1.8"
     "@hoprnet/hopr-utils" "0.3.0"

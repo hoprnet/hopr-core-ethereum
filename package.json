@@ -1,6 +1,6 @@
 {
   "name": "@hoprnet/hopr-core-ethereum",
-  "version": "0.3.0",
+  "version": "0.3.0-xdai",
   "repository": "git@github.com:hoprnet/hopr-core-ethereum.git",
   "license": "LGPL-3.0-only",
   "types": "lib/index.d.ts",
@@ -44,7 +44,7 @@
   "devDependencies": {
     "@hoprnet/hopr-core-connector-interface": "1.7.1",
     "@hoprnet/hopr-demo-seeds": "1.8.0",
-    "@hoprnet/hopr-ethereum": "^1.0.0",
+    "@hoprnet/hopr-ethereum": "^1.1.1-xdai",
     "@hoprnet/hopr-testing": "0.2.0",
     "@types/debug": "^4.1.5",
     "@types/keccak": "^3.0.1",
