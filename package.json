@@ -44,7 +44,7 @@
   "devDependencies": {
     "@hoprnet/hopr-core-connector-interface": "1.7.1",
     "@hoprnet/hopr-demo-seeds": "1.8.0",
-    "@hoprnet/hopr-ethereum": "^1.1.1-xdai",
+    "@hoprnet/hopr-ethereum": "^1.1.2-xdai",
     "@hoprnet/hopr-testing": "0.2.0",
     "@types/debug": "^4.1.5",
     "@types/keccak": "^3.0.1",
