@@ -311,6 +311,13 @@ export default class HoprEthereum implements HoprCoreConnector {
     )
     coreConnector.log(`using blockchain address ${(await coreConnector.account.address).toHex()}`)
 
+    const account = (await coreConnector.account.address).toHex()
+    coreConnector.log(`using blockchain address ${account}`)
+
+    if (+(await web3.eth.getBalance(account)) === 0) {
+      throw Error(`account has no funds, please add some on ${account}`)
+    }
+
     // begin initializing
     coreConnector.initialize().catch((err: Error) => {
       coreConnector.log(chalk.red(`coreConnector.initialize error: ${err.message}`))
