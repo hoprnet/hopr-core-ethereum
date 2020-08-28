@@ -238,7 +238,7 @@ export default class HoprEthereum implements HoprCoreConnector {
         } else {
           const tx = await this.signTransaction(this.hoprToken.methods.transfer(recipient, amount), {
             from: (await this.account.address).toHex(),
-            to: this.hoprChannels.options.address,
+            to: this.hoprToken.options.address,
             nonce: await this.account.nonce,
           })
 
