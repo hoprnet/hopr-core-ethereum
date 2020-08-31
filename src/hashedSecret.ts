@@ -45,6 +45,8 @@ class HashedSecret {
       .accounts((await this.coreConnector.account.address).toHex())
       .call()
 
+    const _nonce = nonce ? nonce : await this.coreConnector.account.nonce
+
     if (account.accountX == null || ['0', '0x', '0x'.padEnd(66, '0')].includes(account.accountX)) {
       const uncompressedPubKey = publicKeyConvert(this.coreConnector.account.keys.onChain.pubKey, false).slice(1)
 
@@ -59,7 +61,7 @@ class HashedSecret {
             {
               from: (await this.coreConnector.account.address).toHex(),
               to: this.coreConnector.hoprChannels.options.address,
-              nonce: nonce || (await this.coreConnector.account.nonce),
+              nonce: _nonce,
             }
           )
         ).send()
@@ -73,7 +75,7 @@ class HashedSecret {
             {
               from: (await this.coreConnector.account.address).toHex(),
               to: this.coreConnector.hoprChannels.options.address,
-              nonce: nonce || (await this.coreConnector.account.nonce),
+              nonce: _nonce,
             }
           )
         ).send()
