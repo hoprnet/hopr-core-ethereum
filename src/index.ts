@@ -156,7 +156,7 @@ export default class HoprEthereum implements HoprCoreConnector {
    */
   async initOnchainValues(nonce?: number): Promise<void> {
     try {
-      await this.hashedSecret.submit(nonce)
+      await this.hashedSecret.initialize(nonce)
     } catch (err) {
       this.log(chalk.red('Unable to submit secret'))
       this.log(chalk.red(err.message))
@@ -188,8 +188,6 @@ export default class HoprEthereum implements HoprCoreConnector {
           this.checkWeb3(),
           // start channels indexing
           this.indexer.start(),
-          // check account secret
-          this.hashedSecret.check(),
         ])
 
         this._status = 'initialized'
