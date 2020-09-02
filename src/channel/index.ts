@@ -36,10 +36,6 @@ class ChannelFactory {
 
   async increaseFunds(counterparty: AccountId, amount: Balance): Promise<void> {
     try {
-      if ((await this.coreConnector.account.balance).lt(amount)) {
-        throw Error(ERRORS.OOF_HOPR)
-      }
-
       await waitForConfirmation(
         (
           await this.coreConnector.signTransaction(
@@ -272,11 +268,19 @@ class ChannelFactory {
 
         if (isPartyA(await this.coreConnector.account.address, counterparty)) {
           if (channelBalance.balance.sub(channelBalance.balance_a).gtn(0)) {
-            await this.increaseFunds(counterparty, new Balance(channelBalance.balance.sub(channelBalance.balance_a)))
+            if (
+              !(await this.coreConnector.account.balance).lt(
+                new Balance(channelBalance.balance.sub(channelBalance.balance_a))
+              )
+            ) {
+              await this.increaseFunds(counterparty, new Balance(channelBalance.balance.sub(channelBalance.balance_a)))
+            }
           }
         } else {
           if (channelBalance.balance_a.gtn(0)) {
-            await this.increaseFunds(counterparty, channelBalance.balance_a)
+            if (!(await this.coreConnector.account.balance).lt(channelBalance.balance_a)) {
+              await this.increaseFunds(counterparty, channelBalance.balance_a)
+            }
           }
         }
 
