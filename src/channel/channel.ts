@@ -1,6 +1,6 @@
 import type { Channel as IChannel } from '@hoprnet/hopr-core-connector-interface'
 import { u8aToHex } from '@hoprnet/hopr-utils'
-import { Balance, ChannelId, Channel as ChannelType, Hash, Moment, Public, SignedChannel } from '../types'
+import { Balance, ChannelId, Hash, Moment, Public, SignedChannel, State } from '../types'
 import TicketFactory from './ticket'
 import { ChannelStatus } from '../types/channel'
 import { waitForConfirmation, waitFor, hash } from '../utils'
@@ -118,8 +118,14 @@ class Channel implements IChannel {
     })
   }
 
-  get state(): Promise<ChannelType> {
-    return Promise.resolve(this._signedChannel.channel)
+  get state(): Promise<State> {
+    return new Promise<State>(async (resolve, reject) => {
+      try {
+        return resolve(new State((await this.channel).stateCounter))
+      } catch (error) {
+        return reject(error)
+      }
+    })
   }
 
   get balance(): Promise<Balance> {
@@ -257,6 +263,10 @@ class Channel implements IChannel {
     return new Hash()
   }
 
+  /**
+   * Ensure this nonce doesn't exist.
+   * @param signature
+   */
   async testAndSetNonce(signature: Uint8Array): Promise<void> {
     const key = new Hash(this.coreConnector.dbKeys.Nonce(await this.channelId, await hash(signature))).toHex()
 
