@@ -80,7 +80,7 @@
     "extension": [
       "ts"
     ],
-    "spec": "src/channel/index.spec.ts",
+    "spec": "src/**/*.spec.ts",
     "require": "ts-node/register"
   }
 }
