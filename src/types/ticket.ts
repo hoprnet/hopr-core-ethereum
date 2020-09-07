@@ -4,8 +4,7 @@ import { stringToU8a, u8aToHex } from '@hoprnet/hopr-utils'
 import { Hash, TicketEpoch, Balance, Signature } from '.'
 import { Uint8ArrayE } from '../types/extended'
 import { sign, hash } from '../utils'
-import { HASHED_SECRET_WIDTH } from '../hashedSecret'
-//
+
 import Web3 from 'web3'
 const web3 = new Web3()
 

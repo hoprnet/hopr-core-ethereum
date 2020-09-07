@@ -72,8 +72,6 @@ class TicketFactory {
     const { ticket, signature } = signedTicket
     const { r, s, v } = utils.getSignatureParameters(signature)
 
-    // @TODO find preImage of current onChainSecret
-
     const onChainSecret = await this.channel.coreConnector.hoprChannels.methods
       .accounts((await pubKeyToAccountId(await signedTicket.signer)).toString())
       .call()
