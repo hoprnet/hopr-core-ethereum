@@ -38,13 +38,13 @@ class Tickets implements ITickets {
           ),
         })
         .on('error', (err) => reject(err))
-        .on('data', async ({ value }: { value: Buffer }) => {
+        .on('data', async ({ key, value }: { key: Buffer; value: Buffer }) => {
           const ticket = new AcknowledgedTicket(this.coreConnector, {
             bytes: value.buffer,
             offset: value.byteOffset,
           })
 
-          tickets.set(u8aToHex((await ticket.signedTicket).ticket.challenge), ticket)
+          tickets.set(u8aToHex(key), ticket)
         })
         .on('end', () => resolve(tickets))
     })

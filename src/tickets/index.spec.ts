@@ -121,15 +121,45 @@ describe('test storing and retrieving tickets', function () {
 
     assert(storedAckTickets.size === 3, `check getting all ackTickets`)
     assert(
-      u8aEquals(ackTicket1, storedAckTickets.get(u8aToHex((await ackTicket1.signedTicket).ticket.challenge))),
+      u8aEquals(
+        ackTicket1,
+        storedAckTickets.get(
+          u8aToHex(
+            coreConnector.dbKeys.AcknowledgedTicket(
+              counterPartyPubKey1,
+              (await ackTicket1.signedTicket).ticket.challenge
+            )
+          )
+        )
+      ),
       `check that ackTicket1 is stored correctly`
     )
     assert(
-      u8aEquals(ackTicket2, storedAckTickets.get(u8aToHex((await ackTicket2.signedTicket).ticket.challenge))),
+      u8aEquals(
+        ackTicket2,
+        storedAckTickets.get(
+          u8aToHex(
+            coreConnector.dbKeys.AcknowledgedTicket(
+              counterPartyPubKey2,
+              (await ackTicket2.signedTicket).ticket.challenge
+            )
+          )
+        )
+      ),
       `check that ackTicket2 is stored correctly`
     )
     assert(
-      u8aEquals(ackTicket2, storedAckTickets.get(u8aToHex((await ackTicket2.signedTicket).ticket.challenge))),
+      u8aEquals(
+        ackTicket3,
+        storedAckTickets.get(
+          u8aToHex(
+            coreConnector.dbKeys.AcknowledgedTicket(
+              counterPartyPubKey3,
+              (await ackTicket3.signedTicket).ticket.challenge
+            )
+          )
+        )
+      ),
       `check that ackTicket3 is stored correctly`
     )
   })
