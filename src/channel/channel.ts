@@ -35,21 +35,6 @@ class Channel implements IChannel {
     this.ticket = new TicketFactory(this)
   }
 
-  private async onceClosed() {
-    return this.coreConnector.channel.onceClosed(
-      new Public(this.coreConnector.account.keys.onChain.pubKey),
-      new Public(this.counterparty)
-    )
-  }
-
-  // private async onOpen(): Promise<void> {
-  //   return onOpen(this.coreConnector, this.counterparty, this._signedChannel)
-  // }
-
-  private async onClose(): Promise<void> {
-    return this.coreConnector.channel.deleteOffChainState(this.counterparty)
-  }
-
   private get channel(): Promise<OnChainChannel> {
     return new Promise<OnChainChannel>(async (resolve, reject) => {
       try {
@@ -118,8 +103,6 @@ class Channel implements IChannel {
     })
   }
 
-  // @TODO
-  // @ts-ignore
   get state(): Promise<ChannelType> {
     return Promise.resolve(this._signedChannel.channel)
   }
@@ -239,19 +222,14 @@ class Channel implements IChannel {
     }
   }
 
-  // @TODO: remove this, no longer needed
-  async getPreviousChallenges(): Promise<Hash> {
-    return new Hash()
-  }
-
   async testAndSetNonce(signature: Uint8Array): Promise<void> {
     const key = new Hash(this.coreConnector.dbKeys.Nonce(await this.channelId, await hash(signature))).toHex()
 
     try {
-      await this.coreConnector.db.get(key)
+      await this.coreConnector.db.get(Buffer.from(key))
     } catch (err) {
       if (err.notFound) {
-        await this.coreConnector.db.put(key, new Uint8Array())
+        await this.coreConnector.db.put(Buffer.from(key), Buffer.from(''))
         return
       }
 
@@ -259,6 +237,21 @@ class Channel implements IChannel {
     }
 
     throw Error('Nonces must not be used twice.')
+  }
+
+  private async onceClosed() {
+    return this.coreConnector.channel.onceClosed(
+      new Public(this.coreConnector.account.keys.onChain.pubKey),
+      new Public(this.counterparty)
+    )
+  }
+
+  // private async onOpen(): Promise<void> {
+  //   return onOpen(this.coreConnector, this.counterparty, this._signedChannel)
+  // }
+
+  private async onClose(): Promise<void> {
+    return this.coreConnector.channel.deleteOffChainState(this.counterparty)
   }
 }
 

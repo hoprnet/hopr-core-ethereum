@@ -1,7 +1,6 @@
 import AccountId from './accountId'
 import Balance from './balance'
-import Channel, { ChannelStatus } from './channel'
-import ChannelBalance from './channelBalance'
+import { Channel, ChannelBalance, ChannelState } from './channel'
 import ChannelEntry from './channelEntry'
 import ChannelId from './channelId'
 import Hash from './hash'
@@ -12,7 +11,6 @@ import Public from './public'
 import Signature from './signature'
 import SignedChannel from './signedChannel'
 import SignedTicket from './signedTicket'
-import State from './state'
 import Ticket from './ticket'
 import TicketEpoch from './ticketEpoch'
 
@@ -21,6 +19,7 @@ class Types {
   public Balance = Balance
   public Channel = Channel
   public ChannelBalance = ChannelBalance
+  public ChannelState = ChannelState
   public ChannelEntry = ChannelEntry
   public ChannelId = ChannelId
   public Hash = Hash
@@ -31,7 +30,6 @@ class Types {
   public Signature = Signature
   public SignedChannel = SignedChannel
   public SignedTicket = SignedTicket
-  public State = State
   public Ticket = Ticket
   public TicketEpoch = TicketEpoch
 }
@@ -43,13 +41,12 @@ export {
   ChannelId,
   ChannelBalance,
   ChannelEntry,
-  ChannelStatus,
+  ChannelState,
   Hash,
   Moment,
   NativeBalance,
   PreImage,
   Public,
-  State,
   Signature,
   SignedChannel,
   SignedTicket,

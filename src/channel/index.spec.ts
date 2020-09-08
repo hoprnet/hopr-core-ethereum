@@ -11,7 +11,8 @@ import pipe from 'it-pipe'
 import Web3 from 'web3'
 import { HoprToken } from '../tsc/web3/HoprToken'
 import { Await } from '../tsc/utils'
-import { AccountId, Balance, Channel as ChannelType, ChannelStatus, ChannelBalance, SignedChannel } from '../types'
+import { Channel as ChannelType, ChannelStatus, ChannelBalance, ChannelState } from '../types/channel'
+import { AccountId, Balance, SignedChannel } from '../types'
 import CoreConnector from '..'
 import Channel from '.'
 import * as testconfigs from '../config.spec'
@@ -72,7 +73,7 @@ describe('test Channel class', function () {
         balance: new BN(123),
         balance_a: new BN(122),
       }),
-      status: ChannelStatus.FUNDING,
+      state: new ChannelState(undefined, { state: ChannelStatus.FUNDING }),
     })
 
     const channelId = await coreConnector.utils.getId(
