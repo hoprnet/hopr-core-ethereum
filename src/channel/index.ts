@@ -14,7 +14,6 @@ import {
   TicketEpoch,
 } from '../types'
 import { ChannelStatus } from '../types/channel'
-import { ERRORS } from '../constants'
 import { waitForConfirmation, getId, events, pubKeyToAccountId, sign, isPartyA } from '../utils'
 
 import type HoprEthereum from '..'
@@ -28,7 +27,6 @@ import { OnChainChannel } from './types'
 import { Log } from 'web3-core'
 
 const EMPTY_SIGNATURE = new Uint8Array(Signature.SIZE).fill(0x00)
-
 const WIN_PROB = new BN(1)
 
 class ChannelFactory {

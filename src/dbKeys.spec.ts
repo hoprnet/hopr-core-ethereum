@@ -76,11 +76,21 @@ describe('test dbKeys', function () {
     assert(new TextDecoder().decode(result).startsWith(expected), 'check onChainSecret key creation')
   })
 
-  it("should create 'Ticket' key", function () {
-    const result = dbKeys.Ticket(channelId, challenge)
-    const expected = u8aConcat(encoder.encode('payments-ticket-'), channelId, encoder.encode('-'), challenge)
+  it("should create 'AcknowledgedTicket' key", function () {
+    const result = dbKeys.AcknowledgedTicket(userA.pubKey, challenge)
+    const expected = u8aConcat(encoder.encode('tickets-acknowledged-'), userA.pubKey, encoder.encode('-'), challenge)
 
-    assert(u8aEquals(result, expected), 'check ticket key creation')
+    assert(u8aEquals(result, expected), 'check AcknowledgedTicket key creation')
+  })
+
+  it("should parse 'AcknowledgedTicket' key", function () {
+    const key = u8aConcat(encoder.encode('tickets-acknowledged-'), userA.pubKey, encoder.encode('-'), challenge)
+    const [result1, result2] = dbKeys.AcknowledgedTicketParse(key)
+    const expected1 = userA.pubKey
+    const expected2 = challenge
+
+    assert(u8aEquals(result1, expected1), 'check AcknowledgedTicket key parsing')
+    assert(u8aEquals(result2, expected2), 'check AcknowledgedTicket key parsing')
   })
 
   it("should create 'ConfirmedBlockNumber' key", function () {

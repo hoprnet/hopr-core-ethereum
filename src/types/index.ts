@@ -1,4 +1,5 @@
 import AccountId from './accountId'
+import AcknowledgedTicket from './acknowledgedTicket'
 import Balance from './balance'
 import Channel, { ChannelStatus } from './channel'
 import ChannelBalance from './channelBalance'
@@ -18,6 +19,7 @@ import TicketEpoch from './ticketEpoch'
 
 class Types {
   public AccountId = AccountId
+  public AcknowledgedTicket = AcknowledgedTicket
   public Balance = Balance
   public Channel = Channel
   public ChannelBalance = ChannelBalance
@@ -38,6 +40,7 @@ class Types {
 
 export {
   AccountId,
+  AcknowledgedTicket,
   Balance,
   Channel,
   ChannelId,
