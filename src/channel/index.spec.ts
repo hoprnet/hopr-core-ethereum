@@ -2,7 +2,7 @@ import { randomBytes } from 'crypto'
 import { Ganache } from '@hoprnet/hopr-testing'
 import { migrate } from '@hoprnet/hopr-ethereum'
 import assert from 'assert'
-import { stringToU8a, u8aToHex, u8aEquals, durations } from '@hoprnet/hopr-utils'
+import { stringToU8a, u8aToHex, u8aEquals, u8aConcat, durations } from '@hoprnet/hopr-utils'
 import HoprTokenAbi from '@hoprnet/hopr-ethereum/build/extracted/abis/HoprToken.json'
 import { getPrivKeyData, createAccountAndFund, createNode } from '../utils/testing.spec'
 import { createChallenge } from '../utils'
@@ -174,12 +174,21 @@ describe('test Channel class', function () {
 
     assert(await counterpartysChannel.ticket.verify(signedTicket), `Ticket signature must be valid.`)
 
-    await counterpartysChannel.ticket.submit(signedTicket, secretA, secretB)
-    const hashedSecret = await counterpartysChannel.coreConnector.hoprChannels.methods
+    const hashedSecretBefore = await counterpartysChannel.coreConnector.hoprChannels.methods
       .accounts((await counterpartysChannel.coreConnector.account.address).toHex())
       .call()
       .then((res) => res.hashedSecret)
 
-    assert.notEqual(hashedSecret, u8aToHex(signedTicket.ticket.onChainSecret), 'Ticket redemption failed.')
+    await counterpartysChannel.ticket.submit(
+      signedTicket,
+      await counterpartysCoreConnector.utils.hash(u8aConcat(secretA, secretB))
+    )
+
+    const hashedSecretAfter = await counterpartysChannel.coreConnector.hoprChannels.methods
+      .accounts((await counterpartysChannel.coreConnector.account.address).toHex())
+      .call()
+      .then((res) => res.hashedSecret)
+
+    assert.notEqual(hashedSecretBefore, hashedSecretAfter, 'Ticket redemption must alter on-chain secret.')
   })
 })

@@ -1,6 +1,6 @@
 import type IChannel from '.'
 import BN from 'bn.js'
-import { u8aToHex, stringToU8a, u8aConcat } from '@hoprnet/hopr-utils'
+import { u8aToHex, u8aConcat, stringToU8a } from '@hoprnet/hopr-utils'
 import { Hash, TicketEpoch, Balance, SignedTicket, Ticket } from '../types'
 import { pubKeyToAccountId } from '../utils'
 
@@ -23,15 +23,10 @@ class TicketFactory {
     const channelId = await this.channel.channelId
     const counterParty = (await pubKeyToAccountId(this.channel.counterparty)).toHex()
 
-    const { onChainSecret, epoch } = await this.channel.coreConnector.hoprChannels.methods
+    const epoch = await this.channel.coreConnector.hoprChannels.methods
       .accounts(counterParty)
       .call()
-      .then((res) => {
-        return {
-          onChainSecret: stringToU8a(res.hashedSecret),
-          epoch: new TicketEpoch(Number(res.counter)),
-        }
-      })
+      .then((res) => new TicketEpoch(Number(res.counter)))
 
     const signedTicket = new SignedTicket(arr)
 
@@ -46,7 +41,6 @@ class TicketFactory {
         epoch,
         amount,
         winProb,
-        onChainSecret,
       }
     )
 
@@ -73,18 +67,23 @@ class TicketFactory {
     return await signedTicket.verify(await this.channel.offChainCounterparty)
   }
 
-  async submit(signedTicket: SignedTicket, secretA: Uint8Array, secretB: Uint8Array): Promise<void> {
+  async submit(signedTicket: SignedTicket, hashedSecretASecretB: Hash): Promise<void> {
     const { hoprChannels, signTransaction, account, utils } = this.channel.coreConnector
     const { ticket, signature } = signedTicket
     const { r, s, v } = utils.getSignatureParameters(signature)
 
-    const preImage = await this.channel.coreConnector.hashedSecret.findPreImage(ticket.onChainSecret)
+    const onChainSecret = await this.channel.coreConnector.hoprChannels.methods
+      .accounts(u8aToHex(await this.channel.coreConnector.account.address))
+      .call()
+      .then((res) => new Hash(stringToU8a(res.hashedSecret)))
+
+    const preImage = await this.channel.coreConnector.hashedSecret.findPreImage(onChainSecret)
 
     const transaction = await signTransaction(
       hoprChannels.methods.redeemTicket(
         u8aToHex(preImage.preImage),
         u8aToHex(ticket.channelId),
-        u8aToHex(await utils.hash(u8aConcat(secretA, secretB))),
+        u8aToHex(hashedSecretASecretB),
         ticket.amount.toString(),
         u8aToHex(ticket.winProb),
         u8aToHex(r),
