@@ -108,7 +108,6 @@ class ChannelFactory {
     if (!challenge) {
       throw Error(`Challenge is not set`)
     }
-    const channelId = await getId(await pubKeyToAccountId(this.coreConnector.account.keys.onChain.pubKey), counterparty)
 
     const winProb = new Uint8ArrayE(new BN(new Uint8Array(Hash.SIZE).fill(0xff)).div(WIN_PROB).toArray('le', Hash.SIZE))
 
@@ -120,7 +119,7 @@ class ChannelFactory {
         offset: signedTicket.ticketOffset,
       },
       {
-        channelId,
+        counterparty,
         challenge,
         epoch: new TicketEpoch(0),
         amount: new Balance(0),

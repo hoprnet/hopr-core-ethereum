@@ -1,6 +1,6 @@
 import type IChannel from '.'
 import BN from 'bn.js'
-import { u8aToHex, u8aConcat, stringToU8a } from '@hoprnet/hopr-utils'
+import { u8aToHex, stringToU8a } from '@hoprnet/hopr-utils'
 import { Hash, TicketEpoch, Balance, SignedTicket, Ticket } from '../types'
 import { pubKeyToAccountId } from '../utils'
 
@@ -82,7 +82,6 @@ class TicketFactory {
     const transaction = await signTransaction(
       hoprChannels.methods.redeemTicket(
         u8aToHex(preImage.preImage),
-        u8aToHex(ticket.channelId),
         u8aToHex(hashedSecretASecretB),
         ticket.amount.toString(),
         u8aToHex(ticket.winProb),
