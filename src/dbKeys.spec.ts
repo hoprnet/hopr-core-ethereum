@@ -1,7 +1,7 @@
 import assert from 'assert'
 import { randomBytes } from 'crypto'
 import { u8aConcat, u8aEquals } from '@hoprnet/hopr-utils'
-import { Hash, ChannelId } from './types'
+import { Hash } from './types'
 import * as dbKeys from './dbKeys'
 import { getId } from './utils'
 import { getPrivKeyData } from './utils/testing.spec'
@@ -12,13 +12,13 @@ const encoder = new TextEncoder()
 describe('test dbKeys', function () {
   let userA: Await<ReturnType<typeof getPrivKeyData>>
   let userB: Await<ReturnType<typeof getPrivKeyData>>
-  let channelId: ChannelId
+  let channelId: Hash
   const challenge = new Hash(randomBytes(32))
 
   before(async () => {
     userA = await getPrivKeyData(randomBytes(32))
     userB = await getPrivKeyData(randomBytes(32))
-    channelId = new ChannelId(await getId(userA.address, userB.address))
+    channelId = await getId(userA.address, userB.address)
   })
 
   it("should create 'Channel' key", function () {

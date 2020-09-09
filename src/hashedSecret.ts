@@ -1,5 +1,5 @@
 import HoprEthereum from '.'
-import { Hash, PreImage } from './types'
+import { Hash } from './types'
 
 import Debug from 'debug'
 const log = Debug('hopr-core-ethereum:hashedSecret')
@@ -158,7 +158,7 @@ class HashedSecret {
    * values from the database.
    * @param hash the hash to find a preImage for
    */
-  public async findPreImage(hash: Uint8Array): Promise<{ preImage: PreImage; index: number }> {
+  public async findPreImage(hash: Uint8Array): Promise<{ preImage: Hash; index: number }> {
     if (hash.length != HASHED_SECRET_WIDTH) {
       throw Error(
         `Invalid length. Expected a Uint8Array with ${HASHED_SECRET_WIDTH} elements but got one with ${hash.length}`
@@ -211,7 +211,7 @@ class HashedSecret {
       throw Error('Preimage not found')
     }
 
-    return { preImage: new PreImage(intermediary), index }
+    return { preImage: new Hash(intermediary), index }
   }
 
   /**

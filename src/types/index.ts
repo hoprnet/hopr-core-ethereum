@@ -2,11 +2,9 @@ import AccountId from './accountId'
 import Balance from './balance'
 import { Channel, ChannelBalance, ChannelState } from './channel'
 import ChannelEntry from './channelEntry'
-import ChannelId from './channelId'
 import Hash from './hash'
 import Moment from './moment'
 import NativeBalance from './nativeBalance'
-import PreImage from './preImage'
 import Public from './public'
 import Signature from './signature'
 import SignedChannel from './signedChannel'
@@ -21,11 +19,9 @@ class Types {
   public ChannelBalance = ChannelBalance
   public ChannelState = ChannelState
   public ChannelEntry = ChannelEntry
-  public ChannelId = ChannelId
   public Hash = Hash
   public Moment = Moment
   public NativeBalance = NativeBalance
-  public PreImage = PreImage
   public Public = Public
   public Signature = Signature
   public SignedChannel = SignedChannel
@@ -38,14 +34,12 @@ export {
   AccountId,
   Balance,
   Channel,
-  ChannelId,
   ChannelBalance,
   ChannelEntry,
   ChannelState,
   Hash,
   Moment,
   NativeBalance,
-  PreImage,
   Public,
   Signature,
   SignedChannel,
