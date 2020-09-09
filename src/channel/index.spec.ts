@@ -191,5 +191,17 @@ describe('test Channel class', function () {
       .then((res) => res.hashedSecret)
 
     assert.notEqual(hashedSecretBefore, hashedSecretAfter, 'Ticket redemption must alter on-chain secret.')
+
+    let errThrown = false
+    try {
+      await counterpartysChannel.ticket.submit(
+        signedTicket,
+        await counterpartysCoreConnector.utils.hash(u8aConcat(secretA, secretB))
+      )
+    } catch (err) {
+      errThrown = true
+    }
+
+    assert(errThrown, 'Ticket must lose its validity after being submitted')
   })
 })

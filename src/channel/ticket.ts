@@ -20,11 +20,10 @@ class TicketFactory {
     const winProb = new Hash(
       new BN(new Uint8Array(Hash.SIZE).fill(0xff)).div(DEFAULT_WIN_PROB).toArray('le', Hash.SIZE)
     )
-    const channelId = await this.channel.channelId
-    const counterParty = (await pubKeyToAccountId(this.channel.counterparty)).toHex()
+    const counterparty = await pubKeyToAccountId(this.channel.counterparty)
 
     const epoch = await this.channel.coreConnector.hoprChannels.methods
-      .accounts(counterParty)
+      .accounts(counterparty.toHex())
       .call()
       .then((res) => new TicketEpoch(Number(res.counter)))
 
@@ -36,7 +35,7 @@ class TicketFactory {
         offset: signedTicket.ticketOffset,
       },
       {
-        channelId,
+        counterparty,
         challenge,
         epoch,
         amount,

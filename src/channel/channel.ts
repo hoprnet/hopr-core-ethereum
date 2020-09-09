@@ -1,6 +1,6 @@
 import type { Channel as IChannel } from '@hoprnet/hopr-core-connector-interface'
 import { u8aToHex } from '@hoprnet/hopr-utils'
-import { Balance, ChannelId, Channel as ChannelType, Hash, Moment, Public, SignedChannel } from '../types'
+import { Balance, Channel as ChannelType, Hash, Moment, Public, SignedChannel } from '../types'
 import TicketFactory from './ticket'
 import { ChannelStatus } from '../types/channel'
 import { waitForConfirmation, waitFor, hash } from '../utils'
@@ -73,7 +73,7 @@ class Channel implements IChannel {
 
     return new Promise<Hash>(async (resolve, reject) => {
       try {
-        this._channelId = new ChannelId(
+        this._channelId = new Hash(
           await this.coreConnector.utils.getId(
             await this.coreConnector.account.address,
             await this.coreConnector.utils.pubKeyToAccountId(this.counterparty)

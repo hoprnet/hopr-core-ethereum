@@ -63,7 +63,7 @@ describe('test signedTicket construction', async function () {
     assert(signedTicket.ticket.amount.eq(ticketData.amount), 'wrong amount')
     assert(signedTicket.ticket.winProb.eq(ticketData.winProb), 'wrong winProb')
 
-    signedTicket[randomInteger(0, SignedTicket.SIZE)] &= randomBytes(1)[0]
+    signedTicket[randomInteger(1, SignedTicket.SIZE)] = randomBytes(1)[0]
 
     assert(!(await signedTicket.verify(userAPubKey)), 'tweaked signature should not be valid')
   })
@@ -100,11 +100,11 @@ describe('test signedTicket construction', async function () {
     assert(signedTicketB.ticket.amount.eq(ticketData.amount), 'wrong amount')
     assert(signedTicketB.ticket.winProb.eq(ticketData.winProb), 'wrong winProb')
 
-    signedTicketA[randomInteger(0, SignedTicket.SIZE)] &= randomBytes(1)[0]
+    signedTicketA[randomInteger(1, SignedTicket.SIZE)] = randomBytes(1)[0]
 
     assert(!(await signedTicketA.verify(userAPubKey)), 'tweaked signature should not be valid')
 
-    signedTicketB[randomInteger(0, SignedTicket.SIZE)] &= randomBytes(1)[0]
+    signedTicketB[randomInteger(1, SignedTicket.SIZE)] = randomBytes(1)[0]
 
     assert(!(await signedTicketB.verify(userAPubKey)), 'tweaked signature should not be valid')
   })
@@ -146,7 +146,7 @@ describe('test signedTicket construction', async function () {
     assert(signedTicket.ticket.amount.eq(ticketData.amount), 'wrong amount')
     assert(signedTicket.ticket.winProb.eq(ticketData.winProb), 'wrong winProb')
 
-    signedTicket[randomInteger(0, SignedTicket.SIZE)] &= randomBytes(1)[0]
+    signedTicket[randomInteger(1, SignedTicket.SIZE)] = randomBytes(1)[0]
 
     assert(!(await signedTicket.verify(userAPubKey)), 'tweaked signature should not be valid')
   })
