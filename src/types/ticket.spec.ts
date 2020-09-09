@@ -9,7 +9,7 @@ import * as testconfigs from '../config.spec'
 const WIN_PROB = new BN(1)
 
 describe('test ticket construction', async function () {
-  const userA = new AccountId(await pubKeyToAccountId(await privKeyToPubKey(stringToU8a(testconfigs.DEMO_ACCOUNTS[0]))))
+  const userA = await pubKeyToAccountId(await privKeyToPubKey(stringToU8a(testconfigs.DEMO_ACCOUNTS[0])))
 
   const generateTicketData = async () => {
     const challenge = new Hash(randomBytes(32))

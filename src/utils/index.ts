@@ -107,6 +107,11 @@ export async function sign(
     offset: number
   }
 ): Promise<Signature> {
+  if (privKey.length != constants.PRIVATE_KEY_LENGTH) {
+    throw Error(
+      `Invalid privKey argument. Expected a Uint8Array with ${constants.PRIVATE_KEY_LENGTH} elements but got one with ${privKey.length}.`
+    )
+  }
   const result = ecdsaSign(msg, privKey)
 
   const response = new Signature(arr, {
