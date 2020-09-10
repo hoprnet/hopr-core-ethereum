@@ -7,7 +7,7 @@ import { PromiEvent, TransactionReceipt, TransactionConfig } from 'web3-core'
 import { BlockTransactionString } from 'web3-eth'
 import Web3 from 'web3'
 import Debug from 'debug'
-import { u8aConcat } from '@hoprnet/hopr-utils'
+import { u8aConcat, u8aEquals } from '@hoprnet/hopr-utils'
 import { AccountId, Balance, Hash, Signature } from '../types'
 import { ContractEventEmitter } from '../tsc/web3/types'
 import { ChannelStatus } from '../types/channel'
@@ -91,7 +91,7 @@ export async function hash(msg: Uint8Array): Promise<Hash> {
 }
 
 /**
- * Sign message.
+ * Signs a message with ECDSA
  * @param msg the message to sign
  * @param privKey the private key to use when signing
  * @param pubKey deprecated
@@ -123,7 +123,7 @@ export async function sign(
 }
 
 /**
- * Recover signer.
+ * Recovers the public key of the signer from the message
  * @param msg the message that was signed
  * @param signature the signature of the signed message
  * @returns a promise resolved to Uint8Array, the signers public key
@@ -133,7 +133,7 @@ export async function signer(msg: Uint8Array, signature: Signature): Promise<Uin
 }
 
 /**
- * Verify signer.
+ * Checks the validity of the signature by using the public key
  * @param msg the message that was signed
  * @param signature the signature of the signed message
  * @param pubKey the public key of the potential signer
@@ -141,6 +141,14 @@ export async function signer(msg: Uint8Array, signature: Signature): Promise<Uin
  */
 export async function verify(msg: Uint8Array, signature: Signature, pubKey: Uint8Array): Promise<boolean> {
   return ecdsaVerify(signature.signature, msg, pubKey)
+}
+
+export async function isWinningTicket(ticketHash: Hash, challengeResponse: Hash, preImage: Hash, winProb: Hash) {
+  return winProb < (await hash(u8aConcat(ticketHash, challengeResponse, preImage)))
+}
+
+export async function checkChallenge(challenge: Hash, response: Hash) {
+  return u8aEquals(challenge, await hash(response))
 }
 
 /**
@@ -196,9 +204,7 @@ export async function waitForConfirmation<T extends PromiEvent<any>>(event: T) {
  * @param ms milliseconds to wait
  */
 export async function wait(ms: number) {
-  return new Promise((resolve) => {
-    setTimeout(resolve, ms)
-  })
+  return new Promise((resolve) => setTimeout(resolve, ms))
 }
 
 /**
@@ -269,6 +275,10 @@ export function getNetworkName(chainId: number): addresses.Networks {
       return 'goerli'
     case 42:
       return 'kovan'
+    case 77:
+      return 'solkol'
+    case 100:
+      return 'xdai'
     default:
       return 'private'
   }
@@ -312,11 +322,13 @@ export function TransactionSigner(web3: Web3, privKey: Uint8Array) {
     // estimation is not always right, adding some more
     // const estimatedGas = Math.floor((await txObject.estimateGas()) * 1.25)
     const estimatedGas = 200e3
+    const estimatedGasPrice = 1e9
 
     // @TODO: provide some of the values to avoid multiple calls
     const signedTransaction = await web3.eth.accounts.signTransaction(
       {
         gas: estimatedGas,
+        gasPrice: estimatedGasPrice,
         ...txConfig,
         data: abi,
       },
@@ -387,5 +399,5 @@ export function getSignatureParameters(
  * @returns a promise that resolves to a hash
  */
 export async function createChallenge(secretA: Uint8Array, secretB: Uint8Array): Promise<Hash> {
-  return hash(await hash(u8aConcat(secretA, secretB)))
+  return await hash(await hash(u8aConcat(secretA, secretB)))
 }

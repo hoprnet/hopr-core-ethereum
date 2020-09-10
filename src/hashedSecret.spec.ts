@@ -38,6 +38,7 @@ describe('test hashedSecret', function () {
       options: {
         debug,
       },
+      log: () => {},
     } as unknown) as HoprEthereum
 
     connector.account = new Account(

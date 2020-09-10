@@ -1,4 +1,5 @@
-import HoprEthereum from '.'
+import type HoprEthereum from '.'
+import { isWinningTicket } from './utils'
 import { Hash } from './types'
 
 import Debug from 'debug'
@@ -7,11 +8,16 @@ const log = Debug('hopr-core-ethereum:hashedSecret')
 import { randomBytes } from 'crypto'
 import { u8aEquals, u8aToHex, stringToU8a, u8aConcat } from '@hoprnet/hopr-utils'
 import { publicKeyConvert } from 'secp256k1'
+import { SignedTicket, AcknowledgedTicket } from './types'
 
 export const GIANT_STEP_WIDTH = 10000
 export const TOTAL_ITERATIONS = 100000
 export const HASHED_SECRET_WIDTH = 27
-export const EMPTY_HASHED_SECRET = new Uint8Array(HASHED_SECRET_WIDTH).fill(0x00)
+
+export type PreImageResult = {
+  preImage: Hash
+  index: number
+}
 
 class HashedSecret {
   constructor(private coreConnector: HoprEthereum) {}
@@ -19,22 +25,8 @@ class HashedSecret {
   /**
    * @returns a promise that resolves to a Hash if secret is found
    */
-  private async getOnChainSecret(): Promise<Hash | undefined> {
-    const address = (await this.coreConnector.account.address).toHex()
-
-    return this.coreConnector.hoprChannels.methods
-      .accounts(address)
-      .call()
-      .then((res) => {
-        const hashedSecret = stringToU8a(res.hashedSecret)
-
-        // true if this string is an empty bytes32
-        if (u8aEquals(hashedSecret, EMPTY_HASHED_SECRET)) {
-          return undefined
-        }
-
-        return new Hash(hashedSecret)
-      })
+  private async getOnChainSecret(): Promise<Hash | void> {
+    return this.coreConnector.account.onChainSecret
   }
 
   /**
@@ -143,14 +135,40 @@ class HashedSecret {
   }
 
   private async calcOnChainSecretFromDb(): Promise<Hash> {
-    let hashedSecret: Uint8Array = await this.coreConnector.db.get(
-      Buffer.from(this.coreConnector.dbKeys.OnChainSecretIntermediary(TOTAL_ITERATIONS - GIANT_STEP_WIDTH))
-    )
-    for (let i = 0; i < GIANT_STEP_WIDTH; i++) {
-      hashedSecret = (await this.coreConnector.utils.hash(hashedSecret)).slice(0, HASHED_SECRET_WIDTH)
+    let closestIntermediary = TOTAL_ITERATIONS - GIANT_STEP_WIDTH
+
+    let intermediary: Uint8Array
+    while (closestIntermediary > 0) {
+      try {
+        intermediary = await this.coreConnector.db.get(
+          Buffer.from(this.coreConnector.dbKeys.OnChainSecretIntermediary(closestIntermediary))
+        )
+        break
+      } catch (err) {
+        if (!err.notFound) {
+          throw err
+        }
+        closestIntermediary -= GIANT_STEP_WIDTH
+      }
     }
 
-    return new Hash(hashedSecret)
+    if (closestIntermediary == 0) {
+      try {
+        intermediary = await this.coreConnector.db.get(Buffer.from(this.coreConnector.dbKeys.OnChainSecret()))
+      } catch (err) {
+        if (!err.notFound) {
+          throw err
+        }
+
+        return this.createAndStoreSecretOffChain()
+      }
+    }
+
+    for (let i = 0; i < TOTAL_ITERATIONS - closestIntermediary; i++) {
+      intermediary = (await this.coreConnector.utils.hash(intermediary)).slice(0, HASHED_SECRET_WIDTH)
+    }
+
+    return new Hash(intermediary)
   }
 
   /**
@@ -158,7 +176,7 @@ class HashedSecret {
    * values from the database.
    * @param hash the hash to find a preImage for
    */
-  public async findPreImage(hash: Uint8Array): Promise<{ preImage: Hash; index: number }> {
+  public async findPreImage(hash: Uint8Array): Promise<PreImageResult> {
     if (hash.length != HASHED_SECRET_WIDTH) {
       throw Error(
         `Invalid length. Expected a Uint8Array with ${HASHED_SECRET_WIDTH} elements but got one with ${hash.length}`
@@ -213,6 +231,22 @@ class HashedSecret {
 
     return { preImage: new Hash(intermediary), index }
   }
+
+  // public async *reserveIfIsWinning(ticket: AcknowledgedTicket): AsyncGenerator<Hash | void> {
+  //   let currentPreImage: Promise<PreImageResult> = this.findPreImage(await this.getOnChainSecret())
+
+  //   let tmp: PreImageResult
+
+  //   while (true) {
+  //     if (ticket.isWinning((await currentPreImage).preImage)) {
+  //       tmp = await currentPreImage
+  //       currentPreImage = this.findPreImage(tmp.preImage)
+  //       yield tmp.preImage
+  //     } else {
+  //       yield
+  //     }
+  //   }
+  // }
 
   /**
    * Check whether our secret exists and matches our onchain secret.

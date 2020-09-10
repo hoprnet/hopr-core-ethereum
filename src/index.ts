@@ -19,7 +19,6 @@ import type { HoprToken } from './tsc/web3/HoprToken'
 import Account from './account'
 import HashedSecret from './hashedSecret'
 import Path from './path'
-import { Tickets as TicketsType } from '@hoprnet/hopr-core-connector-interface/src/tickets'
 
 export default class HoprEthereum implements HoprCoreConnector {
   private _status: 'uninitialized' | 'initialized' | 'started' | 'stopped' = 'uninitialized'
@@ -33,7 +32,7 @@ export default class HoprEthereum implements HoprCoreConnector {
   public types: types
   public indexer: Indexer
   public account: Account
-  public tickets: typeof TicketsType
+  public tickets: Tickets
   public hashedSecret: HashedSecret
   public path: Path
 
@@ -53,7 +52,7 @@ export default class HoprEthereum implements HoprCoreConnector {
     this.hashedSecret = new HashedSecret(this)
     this.account = new Account(this, privateKey, publicKey)
     this.indexer = new Indexer(this)
-    this.tickets = (new Tickets(this) as unknown) as typeof TicketsType
+    this.tickets = new Tickets(this)
     this.types = new types()
     this.channel = new ChannelFactory(this)
     this.path = new Path(this)
@@ -133,6 +132,7 @@ export default class HoprEthereum implements HoprCoreConnector {
         }
 
         await this.indexer.stop()
+        await this.account.stop()
 
         this._status = 'stopped'
         this.log(chalk.green('Connector stopped'))
@@ -156,7 +156,12 @@ export default class HoprEthereum implements HoprCoreConnector {
    * @param nonce optional specify nonce of the account to run multiple queries simultaneously
    */
   async initOnchainValues(nonce?: number): Promise<void> {
-    await this.hashedSecret.initialize(nonce)
+    try {
+      await this.hashedSecret.initialize(nonce)
+    } catch (err) {
+      this.log(chalk.red('Unable to submit secret'))
+      this.log(chalk.red(err.message))
+    }
   }
 
   /**
@@ -232,7 +237,7 @@ export default class HoprEthereum implements HoprCoreConnector {
         } else {
           const tx = await this.signTransaction(this.hoprToken.methods.transfer(recipient, amount), {
             from: (await this.account.address).toHex(),
-            to: this.hoprChannels.options.address,
+            to: this.hoprToken.options.address,
             nonce: await this.account.nonce,
           })
 
@@ -243,10 +248,6 @@ export default class HoprEthereum implements HoprCoreConnector {
         reject(err)
       }
     })
-  }
-
-  static get constants() {
-    return constants
   }
 
   /**
@@ -303,7 +304,14 @@ export default class HoprEthereum implements HoprCoreConnector {
       seed,
       publicKey
     )
-    coreConnector.log(`using ethereum address ${(await coreConnector.account.address).toHex()}`)
+    coreConnector.log(`using blockchain address ${(await coreConnector.account.address).toHex()}`)
+
+    const account = (await coreConnector.account.address).toHex()
+    coreConnector.log(`using blockchain address ${account}`)
+
+    if (+(await web3.eth.getBalance(account)) === 0) {
+      throw Error(`account has no funds, please add some on ${account}`)
+    }
 
     // begin initializing
     coreConnector.initialize().catch((err: Error) => {
@@ -312,6 +320,10 @@ export default class HoprEthereum implements HoprCoreConnector {
     coreConnector.start()
 
     return coreConnector
+  }
+
+  static get constants() {
+    return constants
   }
 }
 
