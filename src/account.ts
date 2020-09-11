@@ -90,7 +90,8 @@ class Account {
       return Promise.resolve(this._ticketEpoch)
     }
 
-    this.attachTicketEpochListener()
+    this.attachAccountDataListener()
+
     return this.address.then((address) => {
       return this.coreConnector.hoprChannels.methods
         .accounts(address.toHex())
@@ -111,7 +112,7 @@ class Account {
       return Promise.resolve(this._onChainSecret)
     }
 
-    this.attachTicketEpochListener()
+    this.attachAccountDataListener()
 
     return this.address.then((address) => {
       return this.coreConnector.hoprChannels.methods
@@ -143,7 +144,7 @@ class Account {
     })
   }
 
-  private async attachTicketEpochListener() {
+  private async attachAccountDataListener() {
     if (this._ticketEpochListener == null) {
       // listen for 'SecretHashSet' events and update 'ticketEpoch'
       // on error, safely reset 'ticketEpoch' & event listener

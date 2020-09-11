@@ -1,13 +1,13 @@
 import PeerId from 'peer-id'
 import type HoprCoreConnector from '..'
 import { u8aConcat, u8aEquals } from '@hoprnet/hopr-utils'
-import { Types } from '@hoprnet/hopr-core-connector-interface'
+import { Hash, SignedTicket } from '.'
 
 // @TODO this is a duplicate of the same class in hopr-core
 class AcknowledgedTicket<Chain extends HoprCoreConnector = HoprCoreConnector> extends Uint8Array {
-  private _signedTicket: Types.SignedTicket
-  private _response: Types.Hash
-  private _preImage: Types.Hash
+  private _signedTicket: SignedTicket
+  private _response: Hash
+  private _preImage: Hash
 
   private paymentChannels: Chain
 
@@ -18,9 +18,9 @@ class AcknowledgedTicket<Chain extends HoprCoreConnector = HoprCoreConnector> ex
       offset: number
     },
     struct?: {
-      signedTicket: Types.SignedTicket
-      response: Types.Hash
-      preImage: Types.Hash
+      signedTicket: SignedTicket
+      response: Hash
+      preImage: Hash
       redeemed: boolean
     }
   ) {
@@ -52,12 +52,12 @@ class AcknowledgedTicket<Chain extends HoprCoreConnector = HoprCoreConnector> ex
     return this.byteOffset
   }
 
-  get signedTicket(): Promise<Types.SignedTicket> {
+  get signedTicket(): Promise<SignedTicket> {
     if (this._signedTicket != null) {
       return Promise.resolve(this._signedTicket)
     }
 
-    return new Promise<Types.SignedTicket>(async (resolve) => {
+    return new Promise<SignedTicket>(async (resolve) => {
       this._signedTicket = await this.paymentChannels.types.SignedTicket.create({
         bytes: this.buffer,
         offset: this.signedTicketOffset,
@@ -71,7 +71,7 @@ class AcknowledgedTicket<Chain extends HoprCoreConnector = HoprCoreConnector> ex
     return this.byteOffset + this.paymentChannels.types.SignedTicket.SIZE
   }
 
-  get response(): Types.Hash {
+  get response(): Hash {
     if (this._response == null) {
       this._response = new this.paymentChannels.types.Hash(
         new Uint8Array(this.buffer, this.responseOffset, this.paymentChannels.types.Hash.SIZE)
@@ -85,7 +85,7 @@ class AcknowledgedTicket<Chain extends HoprCoreConnector = HoprCoreConnector> ex
     return this.byteOffset + this.paymentChannels.types.SignedTicket.SIZE + this.paymentChannels.types.Hash.SIZE
   }
 
-  get preImage(): Types.Hash {
+  get preImage(): Hash {
     if (this._preImage == null) {
       this._preImage = new this.paymentChannels.types.Hash(
         new Uint8Array(this.buffer, this.signedTicketOffset, this.paymentChannels.types.Hash.SIZE)
