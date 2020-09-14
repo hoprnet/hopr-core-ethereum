@@ -1,10 +1,10 @@
 import type IChannel from '.'
-import BN from 'bn.js'
 import { u8aToHex, stringToU8a } from '@hoprnet/hopr-utils'
 import { Hash, TicketEpoch, Balance, SignedTicket, Ticket } from '../types'
-import { pubKeyToAccountId } from '../utils'
+import { pubKeyToAccountId, computeWinningProbability, isWinningTicket, checkChallenge } from '../utils'
+import assert from 'assert'
 
-const DEFAULT_WIN_PROB = new BN(1)
+const DEFAULT_WIN_PROB = 1
 
 class TicketFactory {
   constructor(public channel: IChannel) {}
@@ -12,14 +12,14 @@ class TicketFactory {
   async create(
     amount: Balance,
     challenge: Hash,
+    winProb: number = DEFAULT_WIN_PROB,
     arr?: {
       bytes: ArrayBuffer
       offset: number
     }
   ): Promise<SignedTicket> {
-    const winProb = new Hash(
-      new BN(new Uint8Array(Hash.SIZE).fill(0xff)).div(DEFAULT_WIN_PROB).toArray('le', Hash.SIZE)
-    )
+    const ticketWinProb = new Hash(computeWinningProbability(winProb))
+
     const counterparty = await pubKeyToAccountId(this.channel.counterparty)
 
     const epoch = await this.channel.coreConnector.hoprChannels.methods
@@ -39,7 +39,7 @@ class TicketFactory {
         challenge,
         epoch,
         amount,
-        winProb,
+        winProb: ticketWinProb,
       }
     )
 
@@ -71,16 +71,25 @@ class TicketFactory {
     const { ticket, signature } = signedTicket
     const { r, s, v } = utils.getSignatureParameters(signature)
 
+    assert(
+      await checkChallenge(signedTicket.ticket.challenge, hashedSecretASecretB),
+      'checks that the given response fulfills the challenge that has been signed by counterparty'
+    )
+
     const onChainSecret = await this.channel.coreConnector.hoprChannels.methods
       .accounts(u8aToHex(await this.channel.coreConnector.account.address))
       .call()
       .then((res) => new Hash(stringToU8a(res.hashedSecret)))
 
-    const preImage = await this.channel.coreConnector.hashedSecret.findPreImage(onChainSecret)
+    const preImage = (await this.channel.coreConnector.hashedSecret.findPreImage(onChainSecret)).preImage
+
+    assert(
+      await isWinningTicket(await signedTicket.ticket.hash, hashedSecretASecretB, preImage, signedTicket.ticket.winProb)
+    )
 
     const transaction = await signTransaction(
       hoprChannels.methods.redeemTicket(
-        u8aToHex(preImage.preImage),
+        u8aToHex(preImage),
         u8aToHex(hashedSecretASecretB),
         ticket.amount.toString(),
         u8aToHex(ticket.winProb),
