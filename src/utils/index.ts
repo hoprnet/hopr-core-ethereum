@@ -7,13 +7,14 @@ import { PromiEvent, TransactionReceipt, TransactionConfig } from 'web3-core'
 import { BlockTransactionString } from 'web3-eth'
 import Web3 from 'web3'
 import Debug from 'debug'
-import { u8aConcat, u8aEquals } from '@hoprnet/hopr-utils'
+import { u8aCompare, u8aConcat, u8aEquals, A_STRICLY_LESS_THAN_B, A_EQUALS_B } from '@hoprnet/hopr-utils'
 import { AccountId, Balance, Hash, Signature } from '../types'
 import { ContractEventEmitter } from '../tsc/web3/types'
 import { ChannelStatus } from '../types/channel'
 import * as constants from '../constants'
 import * as time from './time'
 import * as events from './events'
+import BN from 'bn.js'
 
 export { time, events }
 
@@ -143,10 +144,42 @@ export async function verify(msg: Uint8Array, signature: Signature, pubKey: Uint
   return ecdsaVerify(signature.signature, msg, pubKey)
 }
 
+/**
+ * Decides whether a ticket is a win or not.
+ * Note that this mimics the on-chain logic.
+ * @dev Purpose of the function is to check the validity of
+ * a ticket before we submit it to the blockchain.
+ * @param ticketHash hash value of the ticket to check
+ * @param challengeResponse response that solves the signed challenge
+ * @param preImage preImage of the current onChainSecret
+ * @param winProb winning probability of the ticket
+ */
 export async function isWinningTicket(ticketHash: Hash, challengeResponse: Hash, preImage: Hash, winProb: Hash) {
-  return winProb < (await hash(u8aConcat(ticketHash, challengeResponse, preImage)))
+  return [A_STRICLY_LESS_THAN_B, A_EQUALS_B].includes(
+    u8aCompare(await hash(u8aConcat(ticketHash, challengeResponse, preImage)), winProb)
+  )
 }
 
+/**
+ * Compute the winning probability that is set for a ticket
+ * @param prob Desired winning probability of a ticket, e.g. 0.6 resp. 60%
+ */
+export function computeWinningProbability(prob: number): Uint8Array {
+  if (prob == 1) {
+    return new Uint8Array(Hash.SIZE).fill(0xff)
+  }
+
+  const dividend = new BN(prob.toString(2).slice(2), 2)
+  const divisor = new BN(0).bincn(prob.toString(2).slice(2).length)
+
+  return new Uint8Array(new BN(0).bincn(256).isubn(1).imul(dividend).div(divisor).toArray('be', Hash.SIZE))
+}
+
+/**
+ * Checks whether the given response solves a given challenge
+ * @param challenge challenge for which we search a preImage
+ * @param response response to verify
+ */
 export async function checkChallenge(challenge: Hash, response: Hash) {
   return u8aEquals(challenge, await hash(response))
 }

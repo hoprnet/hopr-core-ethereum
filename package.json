@@ -27,7 +27,7 @@
     "yarn": "1"
   },
   "dependencies": {
-    "@hoprnet/hopr-utils": "^0.5.2",
+    "@hoprnet/hopr-utils": "^0.6.1",
     "bn.js": "^5.1.2",
     "chalk": "^4.1.0",
     "debug": "^4.1.1",
@@ -80,7 +80,7 @@
     "extension": [
       "ts"
     ],
-    "spec": "src/**/*.spec.ts",
+    "spec": "src/hashedSecret.spec.ts",
     "require": "ts-node/register"
   }
 }

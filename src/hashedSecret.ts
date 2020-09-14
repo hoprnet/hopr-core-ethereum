@@ -20,7 +20,42 @@ export type PreImageResult = {
 }
 
 class HashedSecret {
-  constructor(private coreConnector: HoprEthereum) {}
+  private _hashedSecretIterator: AsyncGenerator<Hash, Hash, AcknowledgedTicket>
+  constructor(private coreConnector: HoprEthereum) {
+    this._hashedSecretIterator = async function* () {
+      let ticket: AcknowledgedTicket = yield
+
+      let currentPreImage: Promise<PreImageResult> = this.findPreImage((await this.getOnChainSecret()) as Hash)
+
+      let tmp: PreImageResult = await currentPreImage
+
+      while (true) {
+        if (
+          await isWinningTicket(
+            await (await ticket.signedTicket).ticket.hash,
+            ticket.response,
+            tmp.preImage,
+            (await ticket.signedTicket).ticket.winProb
+          )
+        ) {
+          currentPreImage = this.findPreImage(tmp.preImage)
+
+          if (tmp.index == 0) {
+            // @TODO dispatch call of next hashedSecret submit
+            return tmp.preImage
+          } else {
+            yield tmp.preImage
+          }
+
+          tmp = await currentPreImage
+        } else {
+          yield
+        }
+
+        ticket = yield
+      }
+    }.call(this)
+  }
 
   /**
    * @returns a promise that resolves to a Hash if secret is found
@@ -232,21 +267,11 @@ class HashedSecret {
     return { preImage: new Hash(intermediary), index }
   }
 
-  // public async *reserveIfIsWinning(ticket: AcknowledgedTicket): AsyncGenerator<Hash | void> {
-  //   let currentPreImage: Promise<PreImageResult> = this.findPreImage(await this.getOnChainSecret())
+  public async reserveIfIsWinning(ticket: AcknowledgedTicket): Promise<Hash | void> {
+    await this._hashedSecretIterator.next()
 
-  //   let tmp: PreImageResult
-
-  //   while (true) {
-  //     if (ticket.isWinning((await currentPreImage).preImage)) {
-  //       tmp = await currentPreImage
-  //       currentPreImage = this.findPreImage(tmp.preImage)
-  //       yield tmp.preImage
-  //     } else {
-  //       yield
-  //     }
-  //   }
-  // }
+    return (await this._hashedSecretIterator.next(ticket)).value
+  }
 
   /**
    * Check whether our secret exists and matches our onchain secret.
