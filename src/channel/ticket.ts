@@ -76,10 +76,7 @@ class TicketFactory {
       'checks that the given response fulfills the challenge that has been signed by counterparty'
     )
 
-    const onChainSecret = await this.channel.coreConnector.hoprChannels.methods
-      .accounts(u8aToHex(await this.channel.coreConnector.account.address))
-      .call()
-      .then((res) => new Hash(stringToU8a(res.hashedSecret)))
+    const onChainSecret = await this.channel.coreConnector.account.onChainSecret
 
     const preImage = (await this.channel.coreConnector.hashedSecret.findPreImage(onChainSecret)).preImage
 
@@ -105,6 +102,8 @@ class TicketFactory {
     )
 
     await transaction.send()
+
+    this.channel.coreConnector.account.updateLocalState(preImage)
   }
 }
 

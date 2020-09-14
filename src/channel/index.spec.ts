@@ -5,18 +5,21 @@ import assert from 'assert'
 import { stringToU8a, u8aToHex, u8aEquals, u8aConcat, durations } from '@hoprnet/hopr-utils'
 import HoprTokenAbi from '@hoprnet/hopr-ethereum/build/extracted/abis/HoprToken.json'
 import { getPrivKeyData, createAccountAndFund, createNode } from '../utils/testing.spec'
-import { createChallenge } from '../utils'
+import { createChallenge, isWinningTicket } from '../utils'
 import BN from 'bn.js'
 import pipe from 'it-pipe'
 import Web3 from 'web3'
 import { HoprToken } from '../tsc/web3/HoprToken'
 import { Await } from '../tsc/utils'
 import { Channel as ChannelType, ChannelStatus, ChannelBalance, ChannelState } from '../types/channel'
-import { AccountId, Balance, SignedChannel } from '../types'
+import { AccountId, Balance, SignedChannel, SignedTicket } from '../types'
 import CoreConnector from '..'
 import Channel from '.'
 import * as testconfigs from '../config.spec'
 import * as configs from '../config'
+import { hash, computeWinningProbability } from '../utils'
+
+const DEFAULT_WIN_PROB = 1
 
 describe('test Channel class', function () {
   const ganache = new Ganache()
@@ -27,6 +30,20 @@ describe('test Channel class', function () {
   let coreConnector: CoreConnector
   let counterpartysCoreConnector: CoreConnector
   let funder: Await<ReturnType<typeof getPrivKeyData>>
+
+  async function getTicketData(winProb: number = DEFAULT_WIN_PROB) {
+    const secretA = randomBytes(32)
+    const secretB = randomBytes(32)
+    const challenge = await createChallenge(secretA, secretB)
+
+    return {
+      secretA,
+      secretB,
+      response: await hash(u8aConcat(secretA, secretB)),
+      winProb,
+      challenge,
+    }
+  }
 
   before(async function () {
     this.timeout(60e3)
@@ -117,11 +134,9 @@ describe('test Channel class', function () {
 
     channels.set(u8aToHex(channelId), channelType)
 
-    const secretA = randomBytes(32)
-    const secretB = randomBytes(32)
-    const challenge = await createChallenge(secretA, secretB)
+    const firstTicket = await getTicketData()
 
-    const signedTicket = await channel.ticket.create(new Balance(1), challenge)
+    const signedTicket = await channel.ticket.create(new Balance(1), firstTicket.challenge, firstTicket.winProb)
     assert(
       u8aEquals(await signedTicket.signer, coreConnector.account.keys.onChain.pubKey),
       `Check that signer is recoverable`
@@ -175,33 +190,50 @@ describe('test Channel class', function () {
 
     assert(await counterpartysChannel.ticket.verify(signedTicket), `Ticket signature must be valid.`)
 
-    const hashedSecretBefore = await counterpartysChannel.coreConnector.hoprChannels.methods
-      .accounts((await counterpartysChannel.coreConnector.account.address).toHex())
-      .call()
-      .then((res) => res.hashedSecret)
+    const hashedSecretBefore = await counterpartysChannel.coreConnector.account.onChainSecret
 
-    await counterpartysChannel.ticket.submit(
-      signedTicket,
-      await counterpartysCoreConnector.utils.hash(u8aConcat(secretA, secretB))
-    )
+    await counterpartysChannel.ticket.submit(signedTicket, firstTicket.response)
 
-    const hashedSecretAfter = await counterpartysChannel.coreConnector.hoprChannels.methods
-      .accounts((await counterpartysChannel.coreConnector.account.address).toHex())
-      .call()
-      .then((res) => res.hashedSecret)
+    const hashedSecretAfter = await counterpartysChannel.coreConnector.account.onChainSecret
 
-    assert.notEqual(hashedSecretBefore, hashedSecretAfter, 'Ticket redemption must alter on-chain secret.')
+    assert(!hashedSecretBefore.eq(hashedSecretAfter), 'Ticket redemption must alter on-chain secret.')
 
     let errThrown = false
     try {
-      await counterpartysChannel.ticket.submit(
-        signedTicket,
-        await counterpartysCoreConnector.utils.hash(u8aConcat(secretA, secretB))
-      )
+      await counterpartysChannel.ticket.submit(signedTicket, firstTicket.response)
     } catch (err) {
       errThrown = true
     }
 
     assert(errThrown, 'Ticket must lose its validity after being submitted')
+
+    const ATTEMPTS = 20
+
+    let ticketData
+    let nextSignedTicket: SignedTicket
+    let nextPreImage = (await counterpartysChannel.coreConnector.hashedSecret.findPreImage(hashedSecretAfter)).preImage
+
+    for (let i = 0; i < ATTEMPTS; i++) {
+      ticketData = await getTicketData(0.5)
+      nextSignedTicket = await channel.ticket.create(new Balance(1), ticketData.challenge, ticketData.winProb)
+
+      assert(await counterpartysChannel.ticket.verify(nextSignedTicket), `Ticket signature must be valid.`)
+
+      if (
+        await isWinningTicket(
+          await nextSignedTicket.ticket.hash,
+          ticketData.response,
+          nextPreImage,
+          nextSignedTicket.ticket.winProb
+        )
+      ) {
+        await counterpartysChannel.ticket.submit(nextSignedTicket, ticketData.response)
+        nextPreImage = (await counterpartysChannel.coreConnector.hashedSecret.findPreImage(nextPreImage)).preImage
+
+        console.log(`ticket submitted`)
+
+        await new Promise((resolve) => setTimeout(resolve, 100))
+      }
+    }
   })
 })

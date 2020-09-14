@@ -7,7 +7,7 @@ import { PromiEvent, TransactionReceipt, TransactionConfig } from 'web3-core'
 import { BlockTransactionString } from 'web3-eth'
 import Web3 from 'web3'
 import Debug from 'debug'
-import { u8aCompare, u8aConcat, u8aEquals, A_STRICLY_LESS_THAN_B, A_EQUALS_B } from '@hoprnet/hopr-utils'
+import { u8aCompare, u8aConcat, u8aEquals, A_STRICLY_LESS_THAN_B, A_EQUALS_B, u8aToHex } from '@hoprnet/hopr-utils'
 import { AccountId, Balance, Hash, Signature } from '../types'
 import { ContractEventEmitter } from '../tsc/web3/types'
 import { ChannelStatus } from '../types/channel'
@@ -156,7 +156,7 @@ export async function verify(msg: Uint8Array, signature: Signature, pubKey: Uint
  */
 export async function isWinningTicket(ticketHash: Hash, challengeResponse: Hash, preImage: Hash, winProb: Hash) {
   return [A_STRICLY_LESS_THAN_B, A_EQUALS_B].includes(
-    u8aCompare(await hash(u8aConcat(ticketHash, challengeResponse, preImage)), winProb)
+    u8aCompare(await hash(u8aConcat(ticketHash, preImage, challengeResponse)), winProb)
   )
 }
 
