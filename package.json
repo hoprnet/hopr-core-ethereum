@@ -42,7 +42,7 @@
     "web3-eth-contract": "^1.2.11"
   },
   "devDependencies": {
-    "@hoprnet/hopr-core-connector-interface": "1.10.0",
+    "@hoprnet/hopr-core-connector-interface": "1.10.2",
     "@hoprnet/hopr-demo-seeds": "1.8.0",
     "@hoprnet/hopr-ethereum": "^1.4.3",
     "@hoprnet/hopr-testing": "0.2.0",
@@ -80,7 +80,7 @@
     "extension": [
       "ts"
     ],
-    "spec": "src/channel/index.spec.ts",
+    "spec": "src/**/*.spec.ts",
     "require": "ts-node/register"
   }
 }

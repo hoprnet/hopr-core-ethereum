@@ -1,18 +1,18 @@
-import PeerId from 'peer-id'
-import type HoprCoreConnector from '..'
-import { u8aConcat, u8aEquals } from '@hoprnet/hopr-utils'
+import type HoprEthereum from '../'
 import { Hash, SignedTicket } from '.'
 
+import { HASHED_SECRET_WIDTH } from '../hashedSecret'
+
 // @TODO this is a duplicate of the same class in hopr-core
-class AcknowledgedTicket<Chain extends HoprCoreConnector = HoprCoreConnector> extends Uint8Array {
+class AcknowledgedTicket extends Uint8Array {
   private _signedTicket: SignedTicket
   private _response: Hash
   private _preImage: Hash
 
-  private paymentChannels: Chain
+  private paymentChannels: HoprEthereum
 
   constructor(
-    paymentChannels: Chain,
+    paymentChannels: HoprEthereum,
     arr?: {
       bytes: ArrayBuffer
       offset: number
@@ -98,7 +98,7 @@ class AcknowledgedTicket<Chain extends HoprCoreConnector = HoprCoreConnector> ex
   get preImage(): Hash {
     if (this._preImage == null) {
       this._preImage = new this.paymentChannels.types.Hash(
-        new Uint8Array(this.buffer, this.signedTicketOffset, this.paymentChannels.types.Hash.SIZE)
+        new Uint8Array(this.buffer, this.preImageOffset, HASHED_SECRET_WIDTH)
       )
     }
 
@@ -108,8 +108,8 @@ class AcknowledgedTicket<Chain extends HoprCoreConnector = HoprCoreConnector> ex
   set preImage(_preImage: Hash) {
     this.set(_preImage, this.preImageOffset)
 
-    this._preImage = this._preImage = new this.paymentChannels.types.Hash(
-      new Uint8Array(this.buffer, this.signedTicketOffset, this.paymentChannels.types.Hash.SIZE)
+    this._preImage = new this.paymentChannels.types.Hash(
+      new Uint8Array(this.buffer, this.preImageOffset, HASHED_SECRET_WIDTH)
     )
   }
 
@@ -118,7 +118,7 @@ class AcknowledgedTicket<Chain extends HoprCoreConnector = HoprCoreConnector> ex
       this.byteOffset +
       this.paymentChannels.types.SignedTicket.SIZE +
       this.paymentChannels.types.Hash.SIZE +
-      this.paymentChannels.types.Hash.SIZE
+      HASHED_SECRET_WIDTH
     )
   }
 
@@ -130,31 +130,16 @@ class AcknowledgedTicket<Chain extends HoprCoreConnector = HoprCoreConnector> ex
     this.set([_redeemed ? 1 : 0], this.redeemedOffset - this.byteOffset)
   }
 
-  async verify(peerId: PeerId): Promise<boolean> {
-    const signatureOk = (await this.signedTicket).verify(peerId.pubKey.marshal())
-
-    return (await this.verifyChallenge()) && signatureOk
+  static SIZE(hoprCoreConnector: HoprEthereum): number {
+    return hoprCoreConnector.types.SignedTicket.SIZE + hoprCoreConnector.types.Hash.SIZE + HASHED_SECRET_WIDTH + 1
   }
 
-  async isWinning(): Promise<boolean> {
-    const luck = await this.paymentChannels.utils.hash(
-      u8aConcat(await (await this.signedTicket).ticket.hash, this.preImage, this.response)
-    )
-
-    return luck < (await this.signedTicket).ticket.winProb
-  }
-
-  static SIZE<Chain extends HoprCoreConnector = HoprCoreConnector>(hoprCoreConnector: Chain): number {
-    return (
-      hoprCoreConnector.types.SignedTicket.SIZE +
-      hoprCoreConnector.types.Hash.SIZE +
-      hoprCoreConnector.types.Hash.SIZE +
-      1
-    )
-  }
-
-  private async verifyChallenge(): Promise<boolean> {
-    return u8aEquals((await this.signedTicket).ticket.challenge, await this.paymentChannels.utils.hash(this.response))
+  static create(
+    coreConnector: HoprEthereum,
+    arr?: { bytes: ArrayBuffer; offset: number },
+    struct?: { signedTicket?: SignedTicket; response?: Hash; preImage?: Hash; redeemed?: boolean }
+  ) {
+    return new AcknowledgedTicket(coreConnector, arr, struct)
   }
 }
 
