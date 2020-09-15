@@ -18,10 +18,10 @@ class AcknowledgedTicket<Chain extends HoprCoreConnector = HoprCoreConnector> ex
       offset: number
     },
     struct?: {
-      signedTicket: SignedTicket
-      response: Hash
-      preImage: Hash
-      redeemed: boolean
+      signedTicket?: SignedTicket
+      response?: Hash
+      preImage?: Hash
+      redeemed?: boolean
     }
   ) {
     if (arr == null) {
@@ -33,14 +33,24 @@ class AcknowledgedTicket<Chain extends HoprCoreConnector = HoprCoreConnector> ex
     this.paymentChannels = paymentChannels
 
     if (struct != null) {
-      this.set(struct.signedTicket, this.signedTicketOffset - this.byteOffset)
-      this.set(struct.response, this.responseOffset - this.byteOffset)
-      this.set(struct.preImage, this.preImageOffset - this.byteOffset)
-      this.set([struct.redeemed ? 1 : 0], this.redeemedOffset - this.byteOffset)
+      if (struct.signedTicket != null) {
+        this.set(struct.signedTicket, this.signedTicketOffset - this.byteOffset)
+        this._signedTicket = struct.signedTicket
+      }
 
-      this._signedTicket = struct.signedTicket
-      this._response = struct.response
-      this._preImage = struct.preImage
+      if (struct.response != null) {
+        this.set(struct.response, this.responseOffset - this.byteOffset)
+        this._response = struct.response
+      }
+
+      if (struct.preImage != null) {
+        this.set(struct.preImage, this.preImageOffset - this.byteOffset)
+        this._preImage = struct.preImage
+      }
+
+      if (struct.redeemed != null) {
+        this.set([struct.redeemed ? 1 : 0], this.redeemedOffset - this.byteOffset)
+      }
     }
   }
 
@@ -93,6 +103,14 @@ class AcknowledgedTicket<Chain extends HoprCoreConnector = HoprCoreConnector> ex
     }
 
     return this._preImage
+  }
+
+  set preImage(_preImage: Hash) {
+    this.set(_preImage, this.preImageOffset)
+
+    this._preImage = this._preImage = new this.paymentChannels.types.Hash(
+      new Uint8Array(this.buffer, this.signedTicketOffset, this.paymentChannels.types.Hash.SIZE)
+    )
   }
 
   get redeemedOffset(): number {

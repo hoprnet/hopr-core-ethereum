@@ -1,6 +1,6 @@
 import type IChannel from '.'
-import { u8aToHex, stringToU8a } from '@hoprnet/hopr-utils'
-import { Hash, TicketEpoch, Balance, SignedTicket, Ticket } from '../types'
+import { u8aToHex } from '@hoprnet/hopr-utils'
+import { Hash, TicketEpoch, Balance, SignedTicket, Ticket, AcknowledgedTicket } from '../types'
 import { pubKeyToAccountId, computeWinningProbability, isWinningTicket, checkChallenge } from '../utils'
 import assert from 'assert'
 
@@ -66,13 +66,12 @@ class TicketFactory {
     return await signedTicket.verify(await this.channel.offChainCounterparty)
   }
 
-  async submit(signedTicket: SignedTicket, hashedSecretASecretB: Hash): Promise<void> {
+  async submit(ticket: AcknowledgedTicket): Promise<void> {
     const { hoprChannels, signTransaction, account, utils } = this.channel.coreConnector
-    const { ticket, signature } = signedTicket
-    const { r, s, v } = utils.getSignatureParameters(signature)
+    const { r, s, v } = utils.getSignatureParameters((await ticket.signedTicket).signature)
 
     assert(
-      await checkChallenge(signedTicket.ticket.challenge, hashedSecretASecretB),
+      await checkChallenge((await ticket.signedTicket).ticket.challenge, ticket.response),
       'checks that the given response fulfills the challenge that has been signed by counterparty'
     )
 
@@ -81,15 +80,20 @@ class TicketFactory {
     const preImage = (await this.channel.coreConnector.hashedSecret.findPreImage(onChainSecret)).preImage
 
     assert(
-      await isWinningTicket(await signedTicket.ticket.hash, hashedSecretASecretB, preImage, signedTicket.ticket.winProb)
+      await isWinningTicket(
+        await (await ticket.signedTicket).ticket.hash,
+        ticket.response,
+        preImage,
+        (await ticket.signedTicket).ticket.winProb
+      )
     )
 
     const transaction = await signTransaction(
       hoprChannels.methods.redeemTicket(
         u8aToHex(preImage),
-        u8aToHex(hashedSecretASecretB),
-        ticket.amount.toString(),
-        u8aToHex(ticket.winProb),
+        u8aToHex(ticket.response),
+        (await ticket.signedTicket).ticket.amount.toString(),
+        u8aToHex((await ticket.signedTicket).ticket.winProb),
         u8aToHex(r),
         u8aToHex(s),
         v + 27
@@ -100,6 +104,8 @@ class TicketFactory {
         nonce: (await account.nonce).valueOf(),
       }
     )
+
+    ticket.redeemed = true
 
     await transaction.send()
 
