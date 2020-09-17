@@ -172,7 +172,7 @@ describe('test Channel class', function () {
 
     const hashedSecretBefore = await counterpartysChannel.coreConnector.account.onChainSecret
 
-    await counterpartysChannel.ticket.submit(firstAckedTicket)
+    await counterpartysCoreConnector.channel.tickets.submit(firstAckedTicket)
 
     const hashedSecretAfter = await counterpartysChannel.coreConnector.account.onChainSecret
 
@@ -180,7 +180,7 @@ describe('test Channel class', function () {
 
     let errThrown = false
     try {
-      await counterpartysChannel.ticket.submit(firstAckedTicket)
+      await counterpartysCoreConnector.channel.tickets.submit(firstAckedTicket)
     } catch (err) {
       errThrown = true
     }
@@ -194,7 +194,7 @@ describe('test Channel class', function () {
 
     for (let i = 0; i < ATTEMPTS; i++) {
       ticketData = await getTicketData(0.5)
-      let ackedTicket = new AcknowledgedTicket(counterpartysChannel.coreConnector, undefined, {
+      let ackedTicket = new AcknowledgedTicket(counterpartysCoreConnector, undefined, {
         response: ticketData.response,
       })
 
@@ -205,9 +205,9 @@ describe('test Channel class', function () {
 
       assert(await counterpartysChannel.ticket.verify(nextSignedTicket), `Ticket signature must be valid.`)
 
-      if (await counterpartysChannel.coreConnector.hashedSecret.reserveIfIsWinning(ackedTicket)) {
+      if (await counterpartysCoreConnector.hashedSecret.reserveIfIsWinning(ackedTicket)) {
         console.log(`ticket submitted`)
-        await counterpartysChannel.ticket.submit(ackedTicket)
+        await counterpartysCoreConnector.channel.tickets.submit(ackedTicket)
 
         assert(ackedTicket.redeemed, 'ticket should get marked as redeemed')
       }
