@@ -205,7 +205,7 @@ describe('test Channel class', function () {
 
       assert(await counterpartysChannel.ticket.verify(nextSignedTicket), `Ticket signature must be valid.`)
 
-      if (await counterpartysCoreConnector.hashedSecret.reserveIfIsWinning(ackedTicket)) {
+      if (await counterpartysCoreConnector.account.reservePreImageIfIsWinning(ackedTicket)) {
         console.log(`ticket submitted`)
         await counterpartysCoreConnector.channel.tickets.submit(ackedTicket)
 
